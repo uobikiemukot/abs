@@ -1,2 +1,0 @@
-?package(dvtm):needs="text" section="Applications/Text"\
-  title="dvtm" command="/usr/bin/dvtm"
