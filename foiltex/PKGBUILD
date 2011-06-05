@@ -1,0 +1,25 @@
+# Contributor: haru <haru@nak.ics.keio.ac.jp>
+pkgname=foiltex
+pkgver=0.30
+pkgrel=1
+pkgdesc="Presentation class for latex"
+arch=('i686')
+url="ftp://ftp.riken.go.jp/pub/tex-archive/macros/latex/contrib/foiltex"
+license=('custom')
+depends=('unzip')
+makedepends=()
+optdepends=()
+source=(http://theory.uwinnipeg.ca/scripts/CTAN/macros/latex/contrib/$pkgname.zip)
+md5sums=('0a6b4e64fb883a68d9b288bf3421db25')
+install=$pkgname.install
+
+build() {
+    unzip $srcdir/$pkgname.zip
+    cd $srcdir/$pkgname/
+    latex foiltex.ins foiltex.dtx
+}
+
+package() {
+    mkdir -p $pkgdir/usr/local/texlive/p2009/texmf/ptex/platex/foiltex
+    cp -r $srcdir/$pkgname $pkgdir/usr/local/texlive/p2009/texmf/ptex/platex/
+}

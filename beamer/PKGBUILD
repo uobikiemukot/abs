@@ -1,0 +1,23 @@
+# Contributor: haru <haru@nak.ics.keio.ac.jp>
+pkgname=beamer
+pkgver=3.10
+pkgrel=1
+pkgdesc="Presentation class for latex"
+arch=('i686')
+url="http://bitbucket.org/rivanvx/beamer/downloads"
+license=('custom')
+depends=()
+makedepends=()
+optdepends=()
+source=(http://bitbucket.org/rivanvx/beamer/downloads/$pkgname-3-10.tar.bz2)
+md5sums=('287d32ac87add5e1416d45eddad1254b')
+install=$pkgname.install
+
+build() {
+    tar xf $srcdir/$pkgname-3-10.tar.bz2
+}
+
+package() {
+    mkdir -p $pkgdir/usr/local/texlive/p2009/texmf/ptex/platex/
+    cp -r $pkgname $pkgdir/usr/local/texlive/p2009/texmf/ptex/platex/
+}

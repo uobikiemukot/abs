@@ -1,0 +1,22 @@
+# Contributor: haru <haru@nak.ics.keio.ac.jp>
+
+pkgname=haskell-http
+pkgver=4000.1.1
+pkgrel=1
+pkgdesc="The HTTP package supports client-side web programming in Haskell"
+arch=('i686')
+url=("http://hackage.haskell.org/cgi-bin/hackage-scripts/package/HTTP")
+license=('custom')
+depends=('ghc' 'haskell-network' 'haskell-mtl' 'haskell-parsec')
+makedepends=()
+optdepends=()
+source=(http://hackage.haskell.org/packages/archive/HTTP/$pkgver/HTTP-$pkgver.tar.gz)
+md5sums=('ddf23d46c4d6dc0048c454e3d01caa57')
+
+build() {
+	cd $srcdir/HTTP-$pkgver
+	ghc --make Setup.lhs
+	./Setup configure --builddir=$pkgdir
+	./Setup build
+	./Setup install
+}
