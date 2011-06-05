@@ -1,0 +1,18 @@
+border for frames with no wins
+border - when doing next/prev, popup with full titles
+nicer borders - color bars instead of the lines
+draw_border - ditch the client parameter
+project integration
+gut/fix the mouse support
+status of minimize support
+statusbar?
+better nframe transitions
+refactor out redundant code setmwfact / setmwcol
+fix mouse selection - rxvt cutchars?
+cmd fifo in man page
+
+new terminal cur dir
+s command - make dvtm aware?
+what is keypress() / runinall?
+madtty and 256 colors - does upstream fail?
+	git://git.madism.org/apps/madtty.git

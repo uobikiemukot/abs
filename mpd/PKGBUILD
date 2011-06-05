@@ -1,0 +1,66 @@
+# $Id: PKGBUILD 119766 2011-04-14 20:23:04Z schiv $
+# Maintainer: Angel Velasquez <angvp@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Damir Perisa <damir.perisa@bluewin.ch>
+# Contributor: Ben <ben@benmazer.net>
+
+pkgname=mpd
+pkgver=0.16.2
+pkgrel=3
+pkgdesc="Music daemon that plays MP3, FLAC, and Ogg Vorbis files"
+arch=('i686' 'x86_64')
+license=('GPL')
+url="http://mpd.wikia.com/wiki/Server"
+depends=('alsa-lib' 'audiofile' 'libvorbis' 'libcue' 'mpg123'
+	'wavpack' 'libid3tag' 'flac' 'sqlite3')
+makedepends=('pkgconfig' 'doxygen')
+install=${pkgname}.install
+source=("http://downloads.sourceforge.net/musicpd/${pkgname}-${pkgver}.tar.bz2"
+        'mpd' 'wavpack-cue.patch')
+
+build() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  ./configure --prefix=/usr \
+    --sysconfdir=/etc \
+--enable-alsa --disable-ffmpeg --disable-mad --disable-sidplay \
+--disable-ao --disable-fluidsynth --disable-mikmod --disable-sndfile \
+--enable-audiofile --disable-gme --disable-mms --enable-sqlite \
+--disable-bzip2 --disable-gprof --disable-modplug --disable-test \
+--enable-cue --disable-httpd-output --enable-mpg123 --disable-twolame-encoder \
+--disable-curl --disable-iso9660 --disable-mvp --disable-vorbis-encoder \
+--disable-debug --disable-jack --disable-openal --disable-wave-encoder \
+--disable-dependency-tracking --disable-lame-encoder --disable-pipe-output --enable-wavpack \
+--disable-documentation --disable-lastfm --disable-pulse --disable-werror \
+--disable-FEATURE --disable-libwrap --disable-recorder-output --disable-wildmidi \
+--disable-ffado --disable-lsr --disable-shout --disable-zzip \
+--disable-aac --enable-flac --disable-largefile --disable-oss \
+--disable-dependency-tracking --enable-id3 --disable-mpc --enable-tcp \
+--disable-FEATURE --disable-inotify --disable-oggflac --disable-un \
+--disable-fifo --disable-ipv6 --disable-option-checking --enable-vorbis \
+--with-zeroconf=no
+  patch src/decoder/wavpack_decoder_plugin.c $srcdir/wavpack-cue.patch
+  make
+}
+
+package() {
+  cd ${srcdir}/${pkgname}-${pkgver}
+  make DESTDIR=${pkgdir} install
+
+  # set ours dirs in mpd.conf file
+  sed -i 's|^music_directory.*$|#music_directory "path_to_your_music_collection"|1' doc/mpdconf.example
+  sed -i 's|playlist_directory.*$|playlist_directory "/var/lib/mpd/playlists"|1' doc/mpdconf.example
+  sed -i 's|db_file.*$|db_file "/var/lib/mpd/mpd.db"|1' doc/mpdconf.example
+  sed -i 's|log_file.*$|log_file "/var/log/mpd/mpd.log"|1' doc/mpdconf.example
+  sed -i 's|error_file.*$|error_file "/var/log/mpd/mpd.error"|1' doc/mpdconf.example
+  sed -i 's|#pid_file.*$|pid_file "/var/run/mpd/mpd.pid"|1' doc/mpdconf.example
+  sed -i 's|#state_file.*$|state_file "/var/lib/mpd/mpdstate"|1' doc/mpdconf.example
+  sed -i 's|#user.*$|user "mpd"|1' doc/mpdconf.example
+
+  install -Dm644 doc/mpdconf.example ${pkgdir}/usr/share/mpd/mpd.conf.example
+
+  install -Dm755 ${srcdir}/mpd ${pkgdir}/etc/rc.d/mpd
+  install -d ${pkgdir}/var/{lib/mpd/playlists,log/mpd}
+}
+md5sums=('dedb75cef8e489f3de5231031876fb77'
+         'e5669c2bff4031928531e52475addeb1'
+         'feedb7c4c717c3a90eb23ea2e900154e')

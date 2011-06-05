@@ -1,0 +1,27 @@
+# Committer: haru <haru@nak.ics.keio.ac.jp>
+
+pkgname=special-setting
+pkgver=0.0.1
+pkgrel=1
+pkgdesc="special setting for font, keymap, terminfo, locale etc..."
+arch=('i686')
+url="localhost"
+license=('GPL')
+backup=('usr/share/terminfo/x/xterm-256color' 'usr/share/i18n/charmaps/UTF-8.gz')
+depends=()
+source=('dvp.map.gz' 'ter-v20b.psf.gz' 'UTF-8.gz' 'xterm-256color')
+md5sums=('0de1d72d6a082aae6d992354dd4a0a28'
+         '105639784b9214eb82af6bea27218926'
+         '1eda6d16d558e817d0c8da9e272283cf'
+         '9cdb042c0f28aaf95bf122195b583ab6')
+
+build() {
+	mkdir -p $pkgdir/usr/share/kbd/consolefonts
+	cp $srcdir/ter-v20b.psf.gz $pkgdir/usr/share/kbd/consolefonts
+	mkdir -p $pkgdir/usr/share/kbd/keymaps/i386/dvorak
+	cp $srcdir/dvp.map.gz $pkgdir/usr/share/kbd/keymaps/i386/dvorak
+	mkdir -p $pkgdir/usr/share/i18n/charmaps
+	cp $srcdir/UTF-8.gz $pkgdir/usr/share/i18n/charmaps
+	mkdir -p $pkgdir/usr/share/terminfo/x 
+	cp $srcdir/xterm-256color $pkgdir/usr/share/terminfo/x
+}

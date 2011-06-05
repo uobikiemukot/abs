@@ -1,0 +1,21 @@
+<!DOCTYPE reference PUBLIC "-//OASIS//DTD DocBook V4.1//EN" [
+<!ENTITY twidge "<application>twidge</application>">
+<!ENTITY man.twidge SYSTEM "twidge-manpage.sgml">
+
+    ]>
+
+    <reference>
+  <title>twidge Manual</title>
+  
+  &man.twidge;
+
+    </reference>
+
+
+    <!--
+    Local Variables:
+    mode: sgml
+    sgml-set-face: T
+    End:
+
+    -->

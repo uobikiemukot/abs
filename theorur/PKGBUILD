@@ -1,0 +1,19 @@
+# Contributor: farid abdelnour <farid at atelier-labs.org>
+
+pkgname=theorur
+pkgver=0.5.4
+pkgrel=2
+pkgdesc="A GUI for Ogg/Theora streaming (icecast2 system), written using gtk2."
+arch=('i686')
+url="http://theorur.tvlivre.org/"
+depends=('dvgrab' 'ffmpeg2theora' 'oggfwd' 'libshout')
+license=('GPL3')
+source=(https://theorur.sarava.org/theorur-0.5.4.tar.gz)
+md5sums=('dab14f37cfe7726f93388b8fa740e958')
+
+build() {
+	cd ${startdir}/src/${pkgname}-${pkgver}
+	./configure -prefix=${pkgdir}/usr
+	make || return 1
+	make DESTDIR=${pkgdir} install 
+}

@@ -1,0 +1,93 @@
+#----------------------------------------
+# localhost
+#----------------------------------------
+127.0.0.1	localhost
+
+
+#----------------------------------------
+# Department of Mathematic Network
+#----------------------------------------
+
+131.113.70.5	nak-fddi-relay
+131.113.126.188	nak-ics-relay
+131.113.35.5	nak-relay
+
+
+#-----------------------------------------------------------------------
+# Nakanishi Laboratory Computer Network
+#-----------------------------------------------------------------------
+#
+131.113.46.0	keio-ics-nak-net.keio.ac.jp	# nak.ics.keio.ac.jp
+#131.113.46.2    opal nak-fs-4 			# 
+131.113.46.2    opal 	 			# 
+131.113.46.3    topaz 				# 
+131.113.46.4    garnet  			# 
+131.113.46.5    tourmaline nlpweb		# 
+131.113.46.6    ruby 				# 
+131.113.46.7    pearl 				# 
+131.113.46.8    sapphire nak-fs-2	        # 
+131.113.46.9    spar				#
+131.113.46.10	diamond mailhost 		# 
+131.113.46.11	catseye 			# 
+131.113.46.12	amber				# 
+131.113.46.13	jade     			# 
+131.113.46.14	sard 				#  
+131.113.46.15	amethyst			#  
+131.113.46.16	emerald				# 
+131.113.46.17   platina				#
+131.113.46.18	dendrite 			# 
+131.113.46.20	mythril	                        # Mac (dark-server)
+131.113.46.22	gypsum				# Windows
+131.113.46.21	zircon				# 
+131.113.46.23	peridot 	 		# 
+131.113.46.30	starstone			# Windows
+131.113.46.31	moonstone	 		# 
+131.113.46.32	jasper 				# 
+131.113.46.33	turquoise 			#  
+131.113.46.35	jargoon 		 	# 
+131.113.46.37	sunstone  			# 
+131.113.46.38   obsidian                        # 
+131.113.46.40	darkmatter			# Intel Mac
+131.113.46.41	machalite			# Mac mini
+131.113.46.48	morganite 		 	# 
+#131.113.46.50   gold	 			# 
+#131.113.46.51	jonathan 			# 
+#131.113.46.52	pipin 				# 
+131.113.46.53   olivine 			# 
+#131.113.46.54   rance 				# 
+131.113.46.55   quartz	 			# 
+131.113.46.56   girasol nak-fs-4		# 
+#131.113.46.57   lapis 				#  
+131.113.46.58   agate dserver cannaserver	# 
+131.113.46.59	tanzanite 			# 
+#131.113.46.60	alligator 			#
+#131.113.46.61	crocodile 			# 
+131.113.46.62	kirara 				# 
+131.113.46.63	spar 				# 
+131.113.46.64	iolite 				# 
+131.113.46.65	spinel 				# 
+131.113.46.66	onyx 	 			# 
+131.113.46.67	citrine				# 
+131.113.46.68	bloodstone 			# 
+131.113.46.69	aquamarine 			# 
+131.113.46.70	apatite 			# 
+131.113.46.71   hearts                          # 
+131.113.46.73	beryl				# 
+131.113.46.74	jfn2				# jfn server
+131.113.46.75	jfn				# jfn server
+131.113.46.76	orichalcum			# Intel Mac
+131.113.46.77	adamantite			# Intel Mac
+
+##### Reserved 131.113.46.78 ~ 131.113.46.94 for DHCP (see /etc/dhcpd.conf)
+#####
+
+131.113.46.95	nakswitch		# PLANEX SF-0224FS
+131.113.46.96	lily			# EPSON InterLaser LP-8700PS3
+131.113.46.97	anemone			# Phaser 550JX2 (Color Laser Printer)
+131.113.46.98	rose		   	# Laser Press 4210(both sides printer)
+131.113.46.99	nakwireless		# AirStation WLA2-G54
+
+##### Reserved 131.113.46.100 ~ 131.113.46.125 for DHCP (see /etc/dhcpd.conf)
+#####
+
+131.113.46.126	nak-bp #nak-bp.nak.ics.keio.ac.jp	# BayNet28115

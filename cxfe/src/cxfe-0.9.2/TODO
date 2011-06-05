@@ -1,0 +1,10 @@
+- Add command line dvd device selection *DONE
+- Add Screen blank mode for FB usage
+- Add OSD Support *DONE 
+- Add LIRC (In Progress) and More Keyboard support(In Progress)
+- Add more meaningfull console message and status output
+- Add autoconf/automake to build process (In Progress)
+- Add Multiple input mrls (playlist functionality) *DONE
+- Add xine-lib postprocessing support for deinterlacing (In Progress)
+
+

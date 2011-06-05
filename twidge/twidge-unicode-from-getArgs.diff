@@ -1,0 +1,49 @@
+diff --git a/twidge.cabal b/twidge.cabal
+index 6883036..428e628 100644
+--- a/twidge.cabal
++++ b/twidge.cabal
+@@ -49,7 +49,7 @@ Flag withBitly
+ Executable twidge
+   Build-Depends: network, unix, parsec, MissingH>=1.0.0,
+    mtl, base >= 4 && < 5, HaXml>=1.13.2, HaXml<1.19, hslogger, hoauth,
+-   ConfigFile, directory, HSH, regex-posix, utf8-string, binary,
++   ConfigFile, directory, HSH, regex-posix, utf8-string >= 0.3.5, binary,
+    bytestring, curl
+ 
+   if flag(withBitly)
+diff --git a/twidge.hs b/twidge.hs
+index bc94234..bcd1a8a 100644
+--- a/twidge.hs
++++ b/twidge.hs
+@@ -29,6 +29,7 @@ Written by John Goerzen, jgoerzen\@complete.org
+ 
+ -}
+ 
++import Codec.Binary.UTF8.String (decodeString, isUTF8Encoded)
+ import Config
+ import System.Log.Logger
+ import System.Log.Handler.Simple
+@@ -47,17 +48,19 @@ import Data.Version
+ 
+ main = 
+     do updateGlobalLogger "" (setLevel INFO)
+-       argv <- getArgs
+-       
++       argv <- return . (map decodeHack) =<< getArgs
++
+        case getOpt RequireOrder options argv of
+          (o, n, []) -> worker o n
+          (_, _, errors) -> usageerror (concat errors) -- ++ usageInfo header options)
+-       
++    where
++      -- until GHC #3309 is fixed
++      decodeHack s = if isUTF8Encoded s then decodeString s else s
++
+ options = [Option "d" ["debug"] (NoArg ("d", "")) "Enable debugging",
+            Option "c" ["config"] (ReqArg (stdRequired "c") "FILE")
+                   "Use specified config file",
+            Option "" ["help"] (NoArg ("help", "")) "Display this help"]
+-
+ expandAlias cp cmd = either (const cmd) id $ get cp "alias" cmd
+ 
+ worker args commandargs =

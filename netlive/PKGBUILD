@@ -1,0 +1,305 @@
+# Maintainer: You <yourmail at domain.com>
+
+pkgname=ptexlive
+pkgver=20100322
+_texlive_ver=20091107
+_texlive_name=texlive${_texlive_ver:0:4}-${_texlive_ver}
+pkgrel=2
+pkgdesc='Additional Japanese patches for TeX Live'
+arch=('i686' 'x86_64')
+url='http://tutimura.ath.cx/ptexlive/'
+license=('GPL')
+depends=('perl')
+#'openmotif' 'libxpm' 'libxmu'
+#'ttf-sazanami' 'ttf-unfonts-core'
+#'ttf-arphic-uming' 'ttf-arphic-ukai')
+#'zlib' 'libpng' 'freetype2' 'gd' 't1lib' 'xpdf' 'poppler'
+makedepends=('gzip' 'bzip2' 'unzip' 'xz-utils'
+             'bison' 'flex' 'nkf')
+#p7zip
+optdepends=('gv: PostScript viewer'
+            'acroread-ja: PDF viewer'
+            'evince: PostScript and PDF viewer'
+            'poppler-data: encoding data necessary to evince'
+            'psutils: PostScript utilities'
+            't1utils: Type 1 font manipulation programs')
+provides=('texlive-bin')
+conflicts=('texlive-bin')
+backup=('usr/share/texmf/web2c/texmf.cnf'
+        'usr/share/texmf-config/web2c/mktex.cnf'
+        'usr/share/texmf-config/web2c/updmap.cfg'
+        'usr/share/texmf-config/web2c/fmtutil.cnf'
+        'usr/share/texmf-config/tex/generic/config/language.dat'
+        'usr/share/texmf-config/tex/generic/config/pdftexconfig.tex'
+        'usr/share/texmf-config/ttf2pk/ttf2pk.cfg'
+        'usr/share/texmf-config/dvips/config/config.ps'
+        'usr/share/texmf-config/dvipdfm/config/config'
+        'usr/share/texmf-config/dvipdfmx/dvipdfmx.cfg'
+        'usr/share/texmf-config/xdvi/pxdvi.cfg'
+        'usr/share/texmf-config/xdvi/XDvi'
+        'usr/share/texmf-config/xdvi/xdvi.cfg')
+options=('!makeflags' '!libtool')
+install="${pkgname}.install"
+source=("http://tutimura.ath.cx/~nob/tex/ptexlive/${pkgname}-${pkgver}.tar.gz"
+        "${_texlive_name}.iso.xz"
+        "ptexlive.cfg")
+noextract=("${_texlive_name}.iso.xz")
+md5sums=('85ce174141035a6f8b6614ba7d8b2b73'
+         '9fb85d281118c327bc5d86ce992c0765'
+         'f8fa146d7c0bd7abdc9513be629c1d07')
+
+build() {
+    # unset effective TEX variables
+    local _v
+    for _v in $(env | grep '^TEX' | grep -v '^\(TEXINPUTS=\|TEXDOCVIEW\)'); do
+        unset $(echo $_v | sed -e 's/=.*$//')
+    done
+    unset _v
+
+    cd "${srcdir}"
+
+    # extract ISO if makepkg is being run without -e
+    if [ "$NOEXTRACT" -eq 0 ]; then
+        echo "=================================================="
+        echo "--> Extracting TeXLive ISO image..."
+        echo "=================================================="
+
+        mkdir -p "${srcdir}/${_texlive_name}"
+
+        # extract .iso.xz with bsdtar
+        bsdtar -xf "${_texlive_name}.iso.xz" -C "${_texlive_name}" || return 1
+
+        # use p7zip instead of bsdtar
+        #7za e -y "${_texlive_name}.iso.xz" || return 1
+        #7z x -y -o"${srcdir}/${_texlive_name}" "${_texlive_name}.iso" || return 1
+
+        # extract .iso.xz with p7zip through pipeline (not implemented)
+        #7za e -y -so "${_texlive_name}.iso.xz" | 7z x -y -si -o"${srcdir}/${_texlive_name}" || return 1
+    fi
+
+    echo "=================================================="
+    echo "--> Now make ptexlive..."
+    echo "=================================================="
+
+    local _iso_dir="${srcdir}/${_texlive_name}"
+    local _prefix="${pkgdir}/usr"
+    local _tmp_prefix="${srcdir}/build"
+
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    rm -rf "${_tmp_prefix}"
+    rm -rf "${_prefix}"
+
+    env - UID=$(id -u nobody) GID=$(id -g nobody) make \
+      _ISO_DIR="${_iso_dir}" \
+      _PREFIX="${_prefix}" \
+      _TMP_PREFIX="${_tmp_prefix}" \
+      all0 otf fonty || return 1
+    # NOTE: babel is not implemented
+
+
+    echo "=================================================="
+    echo "--> Installing ptexlive..."
+    echo "=================================================="
+
+    make \
+      _ISO_DIR="${_iso_dir}" \
+      _PREFIX="${_prefix}" \
+      _TMP_PREFIX="${_tmp_prefix}" \
+      install || return 1
+    find "${_prefix}" -type d -exec chmod 755 {} \;
+
+    local _bindir=/usr/bin
+    local _libdir=/usr/lib
+    local _datadir=/usr/share
+    local _mandir=/usr/share/man
+    local _infodir=/usr/share/info
+    local _docdir=/usr/share/doc/"${pkgname}"
+    local _texmf=/usr/share/texmf
+    local _arch="$(ls "${pkgdir}${_bindir}" 2>/dev/null)"
+    #local _arch="${CHOST}"
+
+    # modifiy directory structure
+    install -m 755 -d "${pkgdir}${_mandir}"
+    install -m 755 -d "${pkgdir}${_infodir}"
+    install -m 755 -d "${pkgdir}${_docdir}"
+    mv -f "${_prefix}/texmf/doc/man" "${pkgdir}${_datadir}"
+    mv -f "${_prefix}/texmf/doc/info" "${pkgdir}${_datadir}"
+    mv -f "${_prefix}/texmf/doc/"* "${pkgdir}${_docdir}"
+    rm -rf "${_prefix}/texmf/doc"
+    rm -f "${_prefix}/texmf-dist"
+    rm -rf "${_prefix}/texmf-var"
+    mv -f "${_prefix}/texmf" "${pkgdir}${_datadir}"
+    rm -f "${_prefix}/tlpkg"
+
+    # strip bin-archtecture directory
+    mv -f "${_prefix}/bin/${_arch}/"* "${pkgdir}${_bindir}"
+    rm -rf "${_prefix}/bin/${_arch}"
+    mv -f "${_prefix}/lib/${_arch}/"* "${pkgdir}${_libdir}"
+    rm -rf "${_prefix}/lib/${_arch}"
+
+    # fix targets of symlinks
+    local _f _ot _nt
+    for _f in $(find "${pkgdir}${_bindir}" -type l -lname '../*'); do
+        _ot="$(readlink "$_f")"
+        if [[ $_ot = ../../texmf* ]]; then
+            _nt="$(echo "$_ot"  | sed -e 's|../../|../share/|')"
+            rm -f "$_f"
+            ln -s "$_nt" "$_f" || return 1
+        fi
+    done
+    unset _f _ot _nt
+
+    # clean up unnecessary files
+    rm -f "${pkgdir}${_bindir}/tlmgr"
+    rm -f "${pkgdir}${_bindir}/man"
+
+    # remove symlinks to scripts which don't exist
+    local _f
+    for _f in cachepic ebong epspdf epspdftk makeglossaries \
+              mkgrkindex pdfannotextractor pdfthumb perltex \
+              ppower4 ps4pdf pst2pdf splitindex svn-multi \
+              ulqda vpe; do
+        rm -f "${pkgdir}${_bindir}/$_f"
+    done
+    unset _f
+
+    rm -f  "${pkgdir}${_texmf}/scripts/texlive/"*-{win32,w32}*
+    rm -rf "${pkgdir}${_texmf}/scripts/tlgs"
+    rm -rf "${pkgdir}${_texmf}/asymptote"
+
+    # remove Makefile and PDF files in mandir
+    find "${pkgdir}${_mandir}" -name Makefile -delete
+    rm -f "${pkgdir}${_mandir}/man1/"*.pdf
+    rm -f "${pkgdir}${_mandir}/man5/"*.pdf
+
+    # remove files that belong to asymptote
+    rm -rf "${pkgdir}/usr/share/texmf/tex/latex/asymptote"
+    local _f
+    for _f in asy xasy; do
+        rm -f "${pkgdir}${_mandir}/man1/$_f.1"
+    done
+    unset _f
+
+    # remove files that belong to t1utils
+    local _f
+    for _f in t1ascii t1asm t1binary t1disasm t1mac t1unmac; do
+        rm -f "${pkgdir}${_mandir}/man1/$_f.1"
+    done
+    unset _f
+
+    # remove files that belong to psutils
+    local _f
+    for _f in epsffit extractres fixdlsrps fixfmps fixmacps \
+        fixpsditps fixpspps fixscribeps fixtpps fixwfwps \
+        fixwpps fixwwps getafm includeres psbook psmerge \
+        psnup psresize psselect pstops; do
+        rm -f "${pkgdir}${_mandir}/man1/$_f.1"
+    done
+    unset _f
+
+    # remove symlinks in texmf/fonts/cmap and install cmaps contained in ghostscript
+    find "${pkgdir}${_texmf}/fonts/cmap" -maxdepth 1 -type l -delete
+    local _gs="$(basename "$(echo "${_iso_dir}"/source/ghostscript-*.tar.xz)" .tar.xz)"
+    xz -dc "${_iso_dir}/source/$_gs.tar.xz" | tar xvf - -C "${srcdir}" "$_gs/Resource/CMap" || return 1
+    install -m 644 "${srcdir}/$_gs/Resource/CMap/"* "${pkgdir}${_texmf}/fonts/cmap" || return 1
+    unset _gs
+
+    # remove symlinks in texmf/fonts/{truetype,opentype}
+    find "${pkgdir}${_texmf}/fonts/truetype" -maxdepth 1 -type l -delete
+    find "${pkgdir}${_texmf}/fonts/opentype" -maxdepth 1 -type l -delete
+
+    # remove dir file in infodir
+    rm -f "${pkgdir}${_infodir}/dir"
+
+    # xdvi-search.el
+    install -m 755 -d "${pkgdir}/usr/share/emacs/site-lisp" || return 1
+    install -m 644 "${_tmp_prefix}"/texlive-*-source/texk/xdvik/xdvi-search.el "${pkgdir}/usr/share/emacs/site-lisp" || return 1
+
+    echo "=================================================="
+    echo "--> Configuring ptexlive..."
+    echo "=================================================="
+
+    # replace TEXMF variables in texmf.cfg
+    echo "replace TEXMF variables in ${_texmf}/texmf.cfg"
+    local _var _v
+    local _autotexmf="$(echo "${_texmf}" | sed -e 's|/usr|$SELFAUTODIR|')"
+    while read _var; do
+        _v=$(echo "$_var" | awk '{print $1}')
+        sed -i -e "s|^$_v[[:blank:]]*=.*$|$_var|" "${pkgdir}${_texmf}/web2c/texmf.cnf" || return 1
+done <<EOD
+TEXMFMAIN = ${_autotexmf}
+TEXMFDIST = /usr/share/texmf-dist
+TEXMFLOCAL = /usr/local/share/texmf-local
+TEXMFSYSVAR = ${_autotexmf}-var
+TEXMFSYSCONFIG = ${_autotexmf}-config
+TEXMFVAR = ~/.texlive/texmf-var
+TEXMFCONFIG = ~/.texlive/texmf-config
+TEXMF = {\$TEXMFCONFIG,\$TEXMFVAR,\$TEXMFHOME,!!\$TEXMFSYSCONFIG,!!\$TEXMFSYSVAR,!!\$TEXMFLOCAL,!!\$TEXMFMAIN,!!\$TEXMFDIST}
+EOD
+    unset _var _v _autotexmf
+
+    # disable not used format tables from fmtutil.cnf
+    echo "remove not used format tables from ${_texmf}/web2c/fmtutil.cnf"
+    local _v
+    for _v in xetex luatex; do
+        sed -i -e 's/^\([^[:blank:]]\+[[:blank:]]\+'$_v'\)/#! \1/' "${pkgdir}${_texmf}/web2c/fmtutil.cnf" || return 1
+    done
+    unset _v
+
+    # manually replace font settings in pxdvi.cfg
+: << '#comment'
+    echo "replace font settings in ${_texmf}/xdvi/pxdvi.cfg"
+    local _font _ps _ttf
+    while read _font; do
+        _ps=$(echo "$_font" | awk '{print $1}')
+        _ttf=$(echo "$_font" | awk '{print $2}')
+        sed -i -e 's/^\(replace[[:blank:]]\+'"$_ps"'[[:blank:]]\+\)\(.*\)$/%\1\2\n\1'"$_ttf/" "${pkgdir}${_texmf}/xdvi/pxdvi.cfg" || return 1
+    done <<EOD
+Ryumin-Light       sazanami-mincho.ttf
+GothicBBB-Medium   sazanami-gothic.ttf
+MSung-Light        uming.ttf
+MHei-Medium        ukai.ttf
+STSong-Light       uming.ttf
+STHeitiStd-Regular ukai.ttf
+HYSMyeongJo-Medium UnBatang.ttf
+HYGoThic-Medium    UnDotum.ttf
+EOD
+    unset _font _ps _ttf
+#comment
+
+    # copy config files to texmf-config tree
+    echo "copy config files to ${_texmf}-config"
+    install -m 755 -d "${pkgdir}${_texmf}-config/web2c" || return 1
+    install -m 644 "${pkgdir}${_texmf}/web2c/"{mktex.cnf,updmap.cfg,fmtutil.cnf} "${pkgdir}${_texmf}-config/web2c" || return 1
+
+    install -m 755 -d "${pkgdir}${_texmf}-config/dvips/config" || return 1
+    install -m 644 "${pkgdir}${_texmf}/dvips/config/config.ps" "${pkgdir}${_texmf}-config/dvips/config" || return 1
+
+    install -m 755 -d "${pkgdir}${_texmf}-config/dvipdfm/config" || return 1
+    install -m 644 "${pkgdir}${_texmf}/dvipdfm/config/config" "${pkgdir}${_texmf}-config/dvipdfm/config" || return 1
+
+    install -m 755 -d "${pkgdir}${_texmf}-config/dvipdfmx" || return 1
+    install -m 644 "${pkgdir}${_texmf}/dvipdfmx/dvipdfmx.cfg" "${pkgdir}${_texmf}-config/dvipdfmx" || return 1
+
+    install -m 755 -d "${pkgdir}${_texmf}-config/tex/generic/config" || return 1
+    install -m 644 "${pkgdir}${_texmf}/tex/generic/config/"{language.dat,pdftexconfig.tex} "${pkgdir}${_texmf}-config/tex/generic/config" || return 1
+
+    install -m 755 -d "${pkgdir}${_texmf}-config/xdvi" || return 1
+#install -m 644 "${pkgdir}${_texmf}/xdvi/"{pxdvi.cfg,XDvi,xdvi.cfg} "${pkgdir}${_texmf}-config/xdvi" || return 1
+    install -m 644 "${pkgdir}${_texmf}/xdvi/"{XDvi,xdvi.cfg} "${pkgdir}${_texmf}-config/xdvi" || return 1
+
+    install -m 755 -d "${pkgdir}${_texmf}-config/ttf2pk" || return 1
+    install -m 644 "${pkgdir}${_texmf}/ttf2pk/ttf2pk.cfg" "${pkgdir}${_texmf}-config/ttf2pk/ttf2pk.cfg" || return 1
+}
+
+# NOTE:
+#  * If texlive-bin is already installed, it is necessary to
+#    uninstall texlive-bin with `pacman -Rd texlive-bin' in
+#    advance of the installation of ptexlive.
+#  * I made sure with the following commands that ptexlive doesn't
+#    conflict any packages except texlive-bin.
+#    $ xz -dc ptexlive-*.pkg.tar.xz | gzip -f >p.tar.gz
+#    $ pkgconflict p.tar.gz | awk '{printf("%s\t# %s\n",$1,$6);}' | grep -v texlive-bin | sort -k2
+
+# vim: set ft=sh :
