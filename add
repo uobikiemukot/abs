@@ -1,6 +1,0 @@
-#!/bin/sh
-FOO=`date -u +%s`
-git add .
-git commit -m $FOO
-git remote add $FOO git@github.com:uobikiemukot/abs.git
-git push -u $FOO master

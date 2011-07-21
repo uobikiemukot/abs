@@ -1,0 +1,44 @@
+# Mantainer: haru
+pkgname=crawl
+pkgver=4.0.0beta26+j071_070315
+pkgrel=1
+pkgdesc="Linley's Dungeon Crawl roguelike"
+arch=('i686' 'x86_64')
+url="http://gitorious.org/ffmpeg/ffmpeg-mt"
+license=('custom:crawl')
+depends=('')
+makedepends=('nkf')
+source=('arch.patch' \
+    'http://ftp.gnu.org/gnu/ncurses/ncurses-4.2.tar.gz' \
+    'http://www.kmc.gr.jp/~shin/ncurses-4.2-euc.patch' \
+    'http://crawlj.sourceforge.jp/crawl/orig/dc400b26-src.zip' \
+    'http://crawlj.sourceforge.jp/crawl/dc_j071_070315_src.zip')
+
+build() {
+    # make ncurse
+    cd $srcdir/ncurses-4.2
+    patch -p1 < ../ncurses-4.2-euc.patch
+    ./configure
+    make
+    cp lib/libncurses.a ../libjncurses.a
+
+    # make crawl
+    cd $srcdir/dc400b26-src/source
+    nkf -Lu -d --overwrite makefile.bor
+    nkf -Lu -d -e ../../dc_j071_070315_src/dc400b26j071.pat | patch -p1
+    patch -p1 < ../../arch.patch
+    make -f makefile.lnx
+
+	# install
+	cd $srcdir/dc400b26-src
+	install -m 755 -D source/crawl $pkgdir/usr/local/bin/crawl
+	install -m 644 -D docs/crawl.6 $pkgdir/usr/man/man6/crawl.6
+	install -m 777 -d $pkgdir/usr/share/crawl/save
+	install -m 644 -D licence.txt $pkgdir/usr/share/licenses/crawl/COPYING
+}
+
+md5sums=('b5fb4f27eefe478cf42bd038501f33de'
+         '7926ed3ef7090f72c0a45da1f59400bf'
+         '19d7455c1312f795fc9b959bf8caa6fc'
+         'fed44cf5fc5e9e7f45ef377998505728'
+         'ef72d0d6c264a61fb5b0577c2b219f50')
