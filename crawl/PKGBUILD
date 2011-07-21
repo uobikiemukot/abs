@@ -26,7 +26,7 @@ build() {
 	cd $srcdir/dc400b26-src/source
 	nkf -Lu -d --overwrite makefile.bor
 	nkf -Lu -d -e ../../dc_j071_070315_src/dc400b26j071.pat | patch -p1
-	patch -p1 < ../../arch.patch
+	patch -p1 < ../../arch.patch 
 	make -f makefile.lnx
 
 	# install
