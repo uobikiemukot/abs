@@ -1,5 +1,5 @@
---- source-jp/acr.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/acr.cc	2011-07-21 23:38:25.000000000 +0900
+--- source-jp/acr.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/acr.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -305,6 +305,7 @@
          printf( " Best Crawlers -" EOL );
  #endif
@@ -8,8 +8,8 @@
          exit(0);
      }
  
---- source-jp/AppHdr.h	2011-07-21 23:29:33.000000000 +0900
-+++ source/AppHdr.h	2011-07-21 23:38:25.000000000 +0900
+--- source-jp/AppHdr.h	2011-07-22 01:50:12.000000000 +0900
++++ source/AppHdr.h	2011-07-22 01:50:40.000000000 +0900
 @@ -408,7 +408,7 @@
      // Setting it to nothing or not setting it will cause all game files to
      // be dumped in the current directory.
@@ -32,9 +32,28 @@
  
      // This provides some rudimentary protection against people using
      // save file cheats on multi-user systems.
---- source-jp/chardump.cc	2011-07-21 23:29:32.000000000 +0900
-+++ source/chardump.cc	2011-07-21 23:38:25.000000000 +0900
-@@ -1607,6 +1607,7 @@
+--- source-jp/chardump.cc	2011-07-22 01:50:11.000000000 +0900
++++ source/chardump.cc	2011-07-22 01:52:15.000000000 +0900
+@@ -1591,8 +1591,8 @@
+ 
+ #ifdef STASH_TRACKING
+     char stash_file_name[kPathLen] = "";
+-
+     strncpy(stash_file_name, file_name, kPathLen);
++
+     if (strcmp(fname, "morgue.txt") != 0)
+     {
+         strncat(file_name, ".txt", kPathLen);
+@@ -1601,12 +1601,15 @@
+     }
+     else
+     {
+-        strncpy(stash_file_name, "morgue.lst", kPathLen);
++        if (SysEnv.crawl_dir)
++            strncpy(stash_file_name, SysEnv.crawl_dir, kPathLen);
++        strncat(stash_file_name, "morgue.lst", kPathLen);
+         stashes.dump(stash_file_name);
+     }//morgue.lst
  #endif
  
      FILE *handle = fopen(file_name, "wb");
@@ -42,8 +61,8 @@
  
  #if DEBUG_DIAGNOSTICS
  #ifdef JP
---- source-jp/describe.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/describe.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/describe.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/describe.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -21,7 +21,7 @@
  
  #include <stdlib.h>
@@ -53,8 +72,8 @@
  
  #ifdef DOS
  #include <conio.h>
---- source-jp/direct.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/direct.cc	2011-07-21 23:40:39.000000000 +0900
+--- source-jp/direct.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/direct.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -1511,7 +1511,7 @@
  
          if (mon_arm != NON_ITEM)
@@ -64,8 +83,8 @@
  #ifdef JP 
              snprintf( info, INFO_SIZE, "%sは%sを着ている。", 
  #else
---- source-jp/effects.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/effects.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/effects.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/effects.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -13,6 +13,7 @@
  
  #include <string.h>
@@ -74,8 +93,8 @@
  
  #include "externs.h"
  
---- source-jp/fight.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/fight.cc	2011-07-21 23:45:02.000000000 +0900
+--- source-jp/fight.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/fight.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -4052,8 +4052,8 @@
              case MONS_SPINY_WORM:
              case MONS_JELLYFISH:
@@ -147,8 +166,8 @@
                      poison_monster(defender, false);
                  break;
  
---- source-jp/food.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/food.cc	2011-07-21 23:53:20.000000000 +0900
+--- source-jp/food.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/food.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -1279,20 +1279,25 @@
              restore_stat(STAT_ALL, false);
              break;
@@ -191,8 +210,8 @@
                               (temp_rand == 1) ? "Extra thick crust." :
                               (temp_rand == 2) ? "Vegetable." :
                               (temp_rand == 3) ? "Pepperoni." :
---- source-jp/hiscores.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/hiscores.cc	2011-07-21 23:38:25.000000000 +0900
+--- source-jp/hiscores.cc	2011-07-22 01:50:13.000000000 +0900
++++ source/hiscores.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -29,6 +29,7 @@
  #include <stdlib.h>
  #include <stdio.h>
@@ -211,8 +230,8 @@
  #else
      FILE *handle = fopen("scores", mode);
  #endif
---- source-jp/initfile.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/initfile.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/initfile.cc	2011-07-22 01:50:13.000000000 +0900
++++ source/initfile.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -15,7 +15,7 @@
  
  #include <stdio.h>
@@ -222,8 +241,8 @@
  #include <ctype.h>
  
  #include "Kills.h"
---- source-jp/items.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/items.cc	2011-07-21 23:38:25.000000000 +0900
+--- source-jp/items.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/items.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -3088,7 +3088,7 @@
  //
  // - equipment cannot be destroyed... not only is this the more accurate
@@ -233,8 +252,8 @@
  //   (including weight) which would cause a bit of a mess to state.
  //
  // - no item does anything for just carrying it... if that changes then
---- source-jp/it_use3.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/it_use3.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/it_use3.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/it_use3.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -15,6 +15,7 @@
  #include "it_use3.h"
  
@@ -243,8 +262,8 @@
  
  #include "externs.h"
  
---- source-jp/Kills.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/Kills.cc	2011-07-21 23:33:34.000000000 +0900
+--- source-jp/Kills.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/Kills.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -47,12 +47,12 @@
  #if defined(WIN32CONSOLE) || defined(WINDOWS)
      kill &k = kills[descriptor];
@@ -349,8 +368,8 @@
      kills = (unsigned short) readShort(file);
      exp   = readShort(file);
  
---- source-jp/Kills.h	2011-07-21 23:29:33.000000000 +0900
-+++ source/Kills.h	2011-07-21 23:33:34.000000000 +0900
+--- source-jp/Kills.h	2011-07-22 01:50:12.000000000 +0900
++++ source/Kills.h	2011-07-22 01:50:40.000000000 +0900
 @@ -39,10 +39,10 @@
  };
  
@@ -374,8 +393,8 @@
      std::vector<kill_ghost> ghosts;
  
      void record_ghost_kill(const struct monsters *mon);
---- source-jp/libutil.cc	2011-07-21 23:29:32.000000000 +0900
-+++ source/libutil.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/libutil.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/libutil.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -12,6 +12,7 @@
  #include <stdio.h>
  #include <string.h>
@@ -384,8 +403,8 @@
  
  #ifdef USE_MULTIWIN
  #include "externs.h"
---- source-jp/macro.cc	2011-07-21 23:29:32.000000000 +0900
-+++ source/macro.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/macro.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/macro.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -34,7 +34,7 @@
  
  #include <iostream>
@@ -395,8 +414,8 @@
  #include <map>
  #include <deque>
  
---- source-jp/makefile	2011-07-21 23:29:32.000000000 +0900
-+++ source/makefile	2011-07-21 23:38:25.000000000 +0900
+--- source-jp/makefile	2011-07-22 01:50:11.000000000 +0900
++++ source/makefile	2011-07-22 01:50:40.000000000 +0900
 @@ -8,7 +8,7 @@
  
  #jmf: number of concurrent jobs -- good value is (#_of_CPUs * 2) + 1
@@ -406,8 +425,8 @@
  
  all:
  	$(MAKE) $(OTHER) -f $(MAKEFILE) EXTRA_FLAGS='-O2 -fno-strength-reduce'
---- source-jp/makefile.lnx	2011-07-21 23:29:33.000000000 +0900
-+++ source/makefile.lnx	2011-07-21 23:56:03.000000000 +0900
+--- source-jp/makefile.lnx	2011-07-22 01:50:12.000000000 +0900
++++ source/makefile.lnx	2011-07-22 01:50:40.000000000 +0900
 @@ -17,14 +17,14 @@
  EXTRA_FLAGS = -DJP -DWIZARD
  
@@ -428,8 +447,8 @@
  
  # Include for Linux
  INCLUDES = -I/usr/include/ncurses
---- source-jp/monplace.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/monplace.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/monplace.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/monplace.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -11,6 +11,8 @@
  #include "AppHdr.h"
  #include "monplace.h"
@@ -439,8 +458,8 @@
  #include "externs.h"
  #include "dungeon.h"
  #include "monstuff.h"
---- source-jp/monstuff.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/monstuff.cc	2011-07-21 23:38:25.000000000 +0900
+--- source-jp/monstuff.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/monstuff.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -965,6 +965,7 @@
      char str_polymon[INFO_SIZE] = "";      // cannot use info[] here {dlb}
      bool player_messaged = false;
@@ -469,8 +488,8 @@
      // messaging: {dlb}
      bool invis = mons_flag( targetc, M_INVIS )
                      || mons_has_ench( monster, ENCH_INVIS );
---- source-jp/randart.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/randart.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/randart.cc	2011-07-22 01:50:13.000000000 +0900
++++ source/randart.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -17,6 +17,7 @@
  
  #include <string.h>
@@ -479,8 +498,8 @@
  
  #include "externs.h"
  #include "itemname.h"
---- source-jp/sendscore.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/sendscore.cc	2011-07-21 23:36:21.000000000 +0900
+--- source-jp/sendscore.cc	2011-07-22 01:50:13.000000000 +0900
++++ source/sendscore.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -16,6 +16,8 @@
  #include "AppHdr.h"
  #include "sendscore.h"
@@ -490,8 +509,8 @@
  #include <string>
  
  #if defined(WINDOWS) || defined(WIN32CONSOLE)
---- source-jp/skills2.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/skills2.cc	2011-07-21 23:38:25.000000000 +0900
+--- source-jp/skills2.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/skills2.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -21,6 +21,7 @@
  #include <stdio.h>
  #include <stdlib.h>
@@ -509,8 +528,8 @@
      {"Enchantments", "Charm-Maker", "Infuser", "Bewitcher", "Enchanter", "Spellbinder"},
      {"Summonings", "Caller", "Summoner", "Convoker", "Demonologist", "Hellbinder"},
      {"Necromancy", "Grave Robber", "Reanimator", "Necromancer", "Thanatomancer", "%s of Death"},
---- source-jp/spells4.cc	2011-07-21 23:29:32.000000000 +0900
-+++ source/spells4.cc	2011-07-21 23:36:42.000000000 +0900
+--- source-jp/spells4.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/spells4.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -12,8 +12,9 @@
  
  #include "AppHdr.h"
@@ -522,8 +541,8 @@
  
  #include "externs.h"
  
---- source-jp/stash.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/stash.cc	2011-07-21 23:37:17.000000000 +0900
+--- source-jp/stash.cc	2011-07-22 01:50:13.000000000 +0900
++++ source/stash.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -16,10 +16,11 @@
  #include "travel.h"
  #include <fstream>
@@ -538,8 +557,8 @@
  using namespace std;
  
  
---- source-jp/tags.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/tags.cc	2011-07-21 23:30:16.000000000 +0900
+--- source-jp/tags.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/tags.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -76,6 +76,7 @@
  #endif
  
@@ -548,8 +567,8 @@
  
  #include "abl-show.h"
  #include "enum.h"
---- source-jp/travel.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/travel.cc	2011-07-21 23:37:40.000000000 +0900
+--- source-jp/travel.cc	2011-07-22 01:50:13.000000000 +0900
++++ source/travel.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -20,6 +20,8 @@
  #include "travel.h"
  #include "view.h"
@@ -559,8 +578,8 @@
  #include <ctype.h>
  
  #ifdef DOS
---- source-jp/view.cc	2011-07-21 23:29:33.000000000 +0900
-+++ source/view.cc	2011-07-21 23:38:25.000000000 +0900
+--- source-jp/view.cc	2011-07-22 01:50:12.000000000 +0900
++++ source/view.cc	2011-07-22 01:50:40.000000000 +0900
 @@ -2741,7 +2741,7 @@
  
      start_y = screen_y - half_screen;
