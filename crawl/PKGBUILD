@@ -8,7 +8,7 @@ url="http://gitorious.org/ffmpeg/ffmpeg-mt"
 license=('custom:crawl')
 depends=('')
 makedepends=('nkf')
-source=('arch.patch' \
+source=('arch.patch' 'crawlrc' \
 	'http://ftp.gnu.org/gnu/ncurses/ncurses-4.2.tar.gz' \
 	'http://www.kmc.gr.jp/~shin/ncurses-4.2-euc.patch' \
 	'http://crawlj.sourceforge.jp/crawl/orig/dc400b26-src.zip' \
@@ -34,10 +34,12 @@ build() {
 	install -m 755 -D source/crawl $pkgdir/usr/local/bin/crawl
 	install -m 644 -D docs/crawl.6 $pkgdir/usr/man/man6/crawl.6
 	install -m 777 -d $pkgdir/usr/share/crawl/save
+	install -m 644 -D $srcdir/crawlrc $pkgdir/usr/share/crawl/crawlrc
 	install -m 644 -D licence.txt $pkgdir/usr/share/licenses/crawl/COPYING
 }
 
 md5sums=('a244147fe254e503ddd6a013d12bb04e'
+         '4dabd3596eef9249798d33657a909c98'
          '7926ed3ef7090f72c0a45da1f59400bf'
          '19d7455c1312f795fc9b959bf8caa6fc'
          'fed44cf5fc5e9e7f45ef377998505728'

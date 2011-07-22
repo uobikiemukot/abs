@@ -145,7 +145,7 @@ rotate_minimap = true
 # name
 # name=名前で、ゲーム開始時の名前入力を予め指定
 
-name = haru
+# name = yourname
 
 
 # crawl_dir
@@ -153,7 +153,7 @@ name = haru
 # キャラクターのダンプもここに出力される。
 # 末尾がパスデリミタ'/'で終わるように記述する。
 
-#crawl_dir=/path/to/savedir/
+# crawl_dir=/path/to/savedir/
 
 
 # autopickup
