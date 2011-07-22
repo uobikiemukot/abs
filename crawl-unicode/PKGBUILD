@@ -7,8 +7,10 @@ arch=('i686' 'x86_64')
 url="http://gitorious.org/ffmpeg/ffmpeg-mt"
 license=('custom:crawl')
 depends=('')
+provide=('crawl')
+conflict=('crawl')
 makedepends=('nkf')
-source=('unicode.patch' \
+source=('unicode.patch' 'crawlrc' \
 	'http://crawlj.sourceforge.jp/crawl/orig/dc400b26-src.zip' \
 	'http://crawlj.sourceforge.jp/crawl/dc_j071_070315_src.zip')
 
@@ -25,9 +27,11 @@ build() {
 	install -m 755 -D source/crawl $pkgdir/usr/local/bin/crawl
 	install -m 644 -D docs/crawl.6 $pkgdir/usr/man/man6/crawl.6
 	install -m 777 -d $pkgdir/usr/share/crawl/save
+	install -m 644 -D $srcdir/crawlrc $pkgdir/usr/share/crawl/crawlrc
 	install -m 644 -D licence.txt $pkgdir/usr/share/licenses/crawl/COPYING
 }
 
 md5sums=('75a9b020a7eb8779e0036e2edcdc80f5'
+         '4dabd3596eef9249798d33657a909c98'
          'fed44cf5fc5e9e7f45ef377998505728'
          'ef72d0d6c264a61fb5b0577c2b219f50')
