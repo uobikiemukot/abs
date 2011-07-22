@@ -4,7 +4,13 @@
 * apply following patch
  * japanese localization
  * archlinux patch (bug fix?)
- * unicode patch (original but ad-hoc)
+ * unicode patch (ad-hoc)
+
+## notice
+* please copy crawlrc to ~/.crawlrc
+* but following options are NOT available (only use "false" for these options)
+ * use_zenkaku = true
+ * use_cake = true
 
 ## ref
 * Linley's Dungeon Crawl
