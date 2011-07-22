@@ -1,0 +1,615 @@
+# Crawl 設定ファイル
+#
+# 先頭に'#'のついた行はコメント行として無視される。
+# 初期状態ではオフにすることを意図された項目の行頭にも、
+# '#'をつけてコメントと扱われるようにしている場合がある。
+#
+# 設定の基本的な書式は:
+# 対象項目 = 値 
+#   例) colour_map = true
+# もしくは
+# 対象項目.副項目 = 値
+#   例) colour.lightgray = black
+#
+# trueはそのオプションを有効にするということで、
+# falseはそのオプションを無効にするということを意味する。
+#
+# 設定の記述は、1行に1つづつ指定していく。
+# 同じ行で2箇所の設定を行うことはできない。
+#
+# 設定の記述においては、基本的に大文字小文字の違いは無視される。
+# ただし、キャラクター名やファイル名、そしてディレクトリ名などの
+# 大文字小文字の区別が明示的な文字列については区別される。
+#
+# 英数字は(当然のごとく)半角英数字で記述する。
+#
+# 半角スペースは基本的に無視される。
+# また、タイル版用のオプションはコンソール版では無視される。
+
+
+# travel_delay
+# トラベル移動時の1歩移動あたりの表示遅延時間。
+# 値は-1から2000。ミリセカンドで指定し、2000で2秒。
+# travel_delay = -1 で、トラベル移動時の経過自体を非表示にする。
+
+travel_delay = 0
+
+# show_items
+# タイル版でステータス欄の下に並べるアイテムアイコンの種類。
+# show_items = の後に、表示したいアイテム種の記号を並べる。
+#
+#    )      武器
+#    (      飛び道具
+#    [      鎧
+#    /      ワンド
+#    %      食べ物
+#    ?      巻物
+#    " or =     装身具
+#    !      薬
+#    + or : 本
+#    \ or | 杖
+#    0      オーブ
+#    }      その他のアイテム(カードデッキや水晶球など)
+#    X      モンスターの死体
+#    .      床上
+#
+# 例) show_items = %!?/ で、食べ物・薬・巻物・ワンドを表示
+
+show_items = .!?/%
+
+# enter_latest_name
+# タイトルでEnterを押すだけで最後に使用した名前が自動入力されるようにするか
+# 否かを設定する。
+
+enter_latest_name = true
+
+
+# pick_items_start
+# [g][,]でアイテムを拾った際に、アイテムをどの文字以降に格納するかを指定する。
+# 例えば、'c'に設定すれば'a'と'b'のアイテム欄が空いていても
+# 必ずc以降に拾ったアイテムを格納する。
+# 'a'に指定することでこのオプションは実質的に無効になる。
+
+pick_items_start = c
+
+
+# stash_tracking
+# キャンプ履歴。
+# explictでプレイヤーが[CTRL]+[s]でキャンプに指定したマスの上のアイテムを、
+# droppedでプレイヤーがアイテムを[d]ropしたマス全てを、
+# allで視認されたアイテムの存在するマス全てを、
+# アイテムの目録に記録する。
+# 目録はファイル名が "キャラクター名.lst" のテキストファイルとして出力され、
+# メモ帳などのテキストエディタで読むことができる。
+# stash_tracking = explicit
+# stash_tracking = dropped
+# stash_tracking = all
+
+stash_tracking = all
+
+# dump_kill_places
+# ダンプに出力される殺害履歴で、モンスターの殺害地点を
+# 表示するかどうかを指定する。
+# noneで非表示、allで5件までを表示。その他の値で1件のみ表示。
+
+dump_kill_places = one
+
+
+# dump_message_count
+# ゲーム中の最後のメッセージを、何行までダンプに出力するかを指定する。
+# 最大で50行まで出力される。
+
+dump_message_count = 20
+
+
+# use_tile
+# タイルを使用する。使用しない場合はテキスト表示となるが
+# ミニマップやマウスなどは使用可能。
+
+use_tile = true
+
+
+# use_qv_mode
+# タイルモードで擬似3D表示を使用する。
+
+use_qv_mode = false
+
+
+# unlock_numpad
+# Windowsタイル版のみ。trueでNumLockの自動解除。
+# テンキーによる操作への便宜のためデフォルトはtrue。
+
+# unlock_numpad = false
+
+
+# rotate_numpad
+# タイルモードクオータービューでテンキー操作を右に45度旋回させる。
+# trueで旋回。falseで旋回なし。
+# デフォルトではtrue。
+
+rotate_numpad = true
+
+
+# rotate_minimap
+# タイルモードクオータービューでミニマップを右に45度旋回させる。
+# trueで旋回。falseで旋回なし。
+
+rotate_minimap = true
+
+
+# windows_font_size
+# ウィンドウズ版でのフォントの変更はゲーム中に[CTRL]+[T]で
+# 行うようになったため、この項目は廃止された。
+
+
+# name
+# name=名前で、ゲーム開始時の名前入力を予め指定
+
+name = haru
+
+
+# crawl_dir
+# macro.txtとinit.txtの格納ディレクトリを設定する。
+# キャラクターのダンプもここに出力される。
+# 末尾がパスデリミタ'/'で終わるように記述する。
+
+crawl_dir=/home/nak/haru/.crawl/
+
+
+# autopickup
+# 自動拾いの設定。
+# autopickup = の後に、自動拾いにしたいアイテム種の記号を並べる。
+#
+#    )		武器
+#    (		飛び道具
+#    [		鎧
+#    /		ワンド
+#    %		食べ物
+#    ?		巻物
+#    " or =     装身具
+#    !		薬
+#    + or :	本
+#    \ or |	杖
+#    0		オーブ
+#    }		その他のアイテム(カードデッキや水晶球など)
+#    X		モンスターの死体
+#    $		金貨
+#
+# 注意 : Crawlの自動拾いはターンを消費する。
+# 自動拾いは飛び道具の回収に便利だが、逃走時に矢を拾ってしまい殺される
+# 危険性もある。
+# ゲーム中にCTRL+Aで自動拾いを有効/無効に切り替えることができるのを
+# 良く覚えておくべきである。
+# 下のban_pickupと上手く組み合わせると効果的に作用する。
+
+autopickup = $?!:"/0%\}
+
+
+# ban_pickup
+# 特定アイテムを拾わない。
+# ban_pickup = ○○○ と記述することで、文字列○○○を含む名前の
+# アイテムを自動拾いしなくなる。
+# autopickで拾う設定をしたアイテム種から拾いたくないアイテムを指定するのに
+# 有用。
+# 文字列は[,]で区切って複数指定することができる。
+# 複数行に渡るban_pickupを記述する場合、各行の先頭に[ban_pickup = ]を
+# 書く必要がある。
+
+ban_pickup = 呪われた,腐った
+ban_pickup = 毒の薬,鈍重の薬,麻痺の薬,混乱の薬,能力低下の薬,腐敗の薬,猛毒の薬
+ban_pickup = 騒音の巻物,拷問の巻物,無為無作為の巻物,呪縛の巻物,焼き討ちの巻物
+ban_pickup = 白紙の巻物,憶喪失の巻物
+ban_pickup = でたらめの杖,空腹の指輪,不正確の護符
+
+
+# pickup_thrown
+# pickup_thrown = true に指定すると投擲/射撃したアイテムを自動拾いする。
+# 矢を使う場合に有用。
+
+pickup_thrown = true
+
+
+# pickup_dropped
+# pickup_dropped = false に指定するとd)ropで床に置いたアイテムは
+# もう自動拾いしない。
+
+pickup_dropped = false
+
+
+# verbose dump
+# 冗長ダンプモード。
+# trueにすることで、それほど重要でないアイテムの詳細も
+# ダンプに出力する。
+
+# verbose_dump  = false
+
+
+# colour_map
+# 視界をカラーで表示する。
+
+colour_map    = true
+
+
+# clean_map
+# 視界外に出たモンスターや雲の表示を消す。
+# デフォルトではfalse(消さない)。過去の表示が残るのは役に立つ場合も多いが
+# 邪魔な場合も多いので、trueにしてしまうかどうかは好みによる。
+
+clean_map = true
+
+
+# clean_detect
+# clean_detect = true を追加することで「モンスターの探知」の
+# 呪文を使用した時に、感知範囲内にあるモンスターの残像を消去する。
+
+clean_detect = true
+
+
+# easy_open
+# 移動キーでそのままドアを開く。
+# デフォルトではtrue。
+
+# easy_open     = false
+
+
+# easy_butcher
+# 簡易死体捌き。
+# * 実験的機能 *  肉を捌く際に呪われていない短刀に自動で持ち替えを行う。
+
+easy_butcher  = true
+
+
+# easy_armour
+# 防具の簡易解除。
+# trueにすると着ている防具をd)ropする時に自動的に脱ぐ。
+
+easy_armour   = false
+
+
+# easy_confirm
+# 確認プロンプトの設定
+# 確認のためのYes/Noに答えるのを簡単にする:
+#       none = 常に大文字で Y/N を押して答えなければならない。
+#       safe = ゲーム終了に関るY/Nのみ大文字での答えに強制。
+#       all  = どのような場面のY/Nにも、
+#              大文字でも小文字でも答えることができる。
+#
+# テンキー使用者への注意: 数字の[7]には小文字の[y]が配置されているので、
+# 望まぬ状況で偶然にyesと答えてしまう危険がある。
+# テンキー使用の場合には'none'ないしは'safe'に設定するのが安全である。
+
+easy_confirm  = all
+
+
+# easy_quit_item_lists
+# このオプションをtrueにすると、スペースキーでアイテム一覧を
+# 閉じることができる。
+# これはESCを押した場合と同じ挙動で、鑑定時のアイテム一覧以外の
+# ほとんどのアイテムリストを閉じることができる。
+# 初期状態ではこの機能はfalse(無効)である。
+
+easy_quit_item_lists = true
+
+
+# stress_cursed
+# 呪われたアイテムの強調表示。
+# 持ち物一覧で、呪いがかかっていることが分かっているアイテムを
+# 赤い文字で強調表示する。
+# 強調表示を解除したい場合には stress_cursed = false と記述する。
+
+stress_cursed = true
+
+
+# show_uncursed
+# 呪われていないアイテムの明示。
+# このオプションは呪われていないことが分かっている未鑑定のアイテムを
+# 『呪われていない○○』と明示する。
+# 完全に鑑定されたアイテムからはこの表示は消える。
+
+show_uncursed = true
+
+
+# weapon
+# ゲーム開始時の武器選択を予め決定する。
+# 設定可能な武器はshort sword, hand axe, spear, mace, tridentの5つである。
+# ただしtridentはマーフォークかグラディエイターのみでしか選択できないので、
+# 多くの場合には開始時に別の選択を求められることになるだろう。
+#
+
+# weapon = hand axe
+
+
+# (クラス固有の選択肢)
+#
+# ゲーム開始時におけるその他の選択肢(信仰など)を予め決定する。
+#
+# "random"を選択した場合にはランダムに決定される。
+#
+# chaos_knight => Xom もしくは Makleb
+# death_knight => necromancy もしくは Yredelemnul
+# priest       => Zin もしくは Yredelemnul
+# 例:
+# chaos_knight = xom
+# death_knight = necromancy
+# priest       = random
+
+
+# random_pick
+# random_pickオプションはランダムに種族や職業を決定する。
+# 武器や信仰のオプションが指定されている場合には、
+# 可能な範囲でそれらを適用しつつランダムなキャラクターを作成する。
+
+# random_pick = true
+
+
+# colour
+# (Windowsでは無効?)
+# 色の再定義を行う。特定色が表示できない端末などで役に立つオプションである。
+# 特に背景が黒でない端末などの場合にはこの設定が必要だろう。
+#
+# 書式は colour.OLDCOLOUR = NEWCOLOUR とする。
+# OLDCOLOURはデフォルトのカラー名、NEWCOLOURはOLDCOLOURを何色に
+# 置きかえるかである。NEWCOLOURは指定可能な色名と一字も違えてはならない。
+#
+# 指定可能な色名:
+# black, blue, green, cyan, red, magenta, brown, lightgrey, darkgrey,
+# lightblue, lightgreen, lightcyan, lightred, lightmagenta, yellow, white
+# lightgray = lightgrey, darkgray = darkgrey
+# 例:
+# colour.lightgray = black
+# colour.white     = black
+# colour.lightcyan = cyan
+# colour.yellow    = brown
+
+colour.blue    = lightblue
+
+# always_greet
+# always_greetをtrueにしていると、ゲーム再開時に種族/職業と
+# 神からのメッセージを毎回表示する。
+
+always_greet = false
+
+
+# background
+# ウィンドウのデフォルト背景色の設定。
+# (Windowsでは無効?)
+# 注意:あまりにかけ離れた色を設定すると、大抵は見苦しい結果になってしまう。 
+
+# background = white
+
+
+# friend_brand
+# 友好的なモンスターを分かりやすく表示する。
+# Winバイナリではreverse(反転強調)のみ有効。
+# これは端末依存の機能なので、望むような表示を得られない環境も多い。
+# 強調表示をしない場合には friend_brand = false と記述。
+#
+# 指定可能なオプションとその(典型的な)挙動:
+#
+# false         -- 強調表示をしたくない場合にはfalseとする。
+# reverse       -- 反転による強調。大抵の場合機能する。Winではこれのみ有効。
+# false         -- 友好的なモンスターを強調表示しない。
+# standout      -- 多くの場合reverse(反転)と同じで、
+#                  アンダーラインされたりする場合もある
+# bold          -- 前景色を明るくする
+# blink         -- 背景色を明るくする
+# dim           -- 大抵の場合機能しない
+# underline     -- 大抵の場合機能する
+#
+# 下は少し面白い例。背景色をblinkでダークグレイにし、更にコウモリなどが
+# 見えるようにするためにダークグレイも文字色をマゼンタに変更。
+# 例:
+# friend_brand = blink
+# colour.darkgrey = magenta
+
+friend_brand = reverse
+
+
+# hp_warning
+# hp_warningはhpが指定%以下になった時に "* * * 低ヒットポイント警告 * * *" を
+# 表示する。これを表示したくない場合には0を指定する。
+
+hp_warning = 25
+
+
+# race
+# raceはゲーム開始時の種族選択を予め指定する。
+# 以下の種族名で指定できる:
+#
+# - キャラクター作成時の種族選択一覧の名前
+# - ハイスコア一覧の英字2文字の略記形種族名
+# - 種族のフルネームにマッチする文字列
+
+# race = human
+
+
+# class
+# classはゲーム開始時の職業選択を予め指定する。
+# 以下の職業名で指定できる:
+#
+# - キャラクター作成時の職業選択一覧の名前
+# - ハイスコア一覧の英字2文字の略記形職業名
+# - 職業のフルネームにマッチする文字列
+
+# class = fighter
+
+
+# wiz_mode
+# ウィザードモードオプション (WIZARDコンパイルした場合のみ有効):
+#     yes   = ゲーム開始時に常にウィザードモード。(スコアは残らない)
+#     no    = ゲーム開始後にウィザードモードに入ることができる。
+#     never = ウィザードモードの使用を完全に禁ずる。
+
+wiz_mode = no
+
+
+# f)での射撃コマンドオプション
+#
+# fire_items_start - 射撃に使用するアイテムの開始アルファベット。
+#                    例えばfire_items_start = cと設定してある場合には、
+#                    f)コマンドではaとbの欄のアイテムは投げない。
+#                    無指定の場合ではaが開始アルファベットになる。
+#
+# fire_order       - どのタイプのアイテムをどのような優先順位で投げるかを
+#                    列挙する。
+#                    アイテムのタイプは以下の通り。
+#                    launcherは弓やスリングとその矢弾を
+#                    使用して射撃することを意味する。
+#                    射撃物のタイプ:
+#                    launcher, dart, stone, dagger, spear, handaxe, club
+#
+#                    fore_orderの列挙は1行に収めなくてはならない。
+#
+# launcherを指定した場合には、弓なら矢、スリングなら石といった具合に
+# 手に持った発射装置に相応しい飛び道具を撃つ。
+# 手に発射装置を持っていない場合や、
+# 発射装置に合った飛び道具を持っていない場合にはlauncherは無視される。
+
+fire_items_start = c
+fire_order = launcher, dart, stone
+
+
+# auto_list
+# アイテムリストの自動表示。
+# このオプションをtrueにすると、『q)飲む』や『r)読む』などのコマンドで
+# 該当するアイテムが表示されるようになる。
+# これは『q)飲む』コマンドなどで[?]を押した時と同じ機能だが、
+# プロンプトを飛ばして一覧が表示されるので初心者は戸惑うことが
+# あるかもしれない。
+#
+# このオプションは『Z)呪文』には効果を及ぼさない。
+# 魔法使いにとっては呪文の一覧が表示されることは
+# 非常に鬱陶しい場合があるからである。
+
+auto_list = true
+
+
+# flush.*
+# 入力バッファの消去オプション
+# これらのオプションはマクロ使用時に有用である。
+# これらのサブオプションがtrueになっていると、該当する場面で
+# 入力バッファを全て廃棄し、効果的にマクロを停止させる。
+#
+# 指定可能なサブオプションは以下の物である (カッコ内は無指定の場合の状態):
+#
+# failure -- 呪文/特殊能力の使用失敗時 (true)
+# command -- ゲームが何らかのコマンド入力を必要としている時 (false)
+# message -- ゲームが何らかのメッセージを表示した時 (false)
+
+# flush.failure = false
+# flush.command = true
+# flush.message = true
+
+
+# lowercase_invocations
+# 小文字による祈祷。
+# 祈祷系の特殊能力を伝統的な[A-E]ではなく、[a-e]で使用するようにする。
+# (無指定の場合には[A-E]）
+
+lowercase_invocations = true
+
+
+# terse_hand
+#『手にしている』の省略。
+# これをfalseにすると、ゲーム画面に表示されている手持ちアイテムについて
+# アイテム一覧と同じように『(手にしている)』と表示する。
+# デフォルトではtrueであり、ゲーム画面での手持ちアイテム欄には
+# 『(手にしている)』を表示しない。
+
+# terse_hand = false
+
+
+# delay_message_clear
+# メッセージ消去の遅延。
+# - 実験的機能 (見苦しい挙動をする場合あり)
+# このオプションをtrueに設定すると、メッセージ欄が完全に埋まるまで
+# 前のメッセージは消去されない。
+# デフォルトではfalseであり、プレイヤーが行動するたびに
+# メッセージ欄は消去される。
+
+# delay_message_clear = true
+
+
+# use_zenkaku
+# 全角文字による地図表示。
+# 日本語版のみのオプションで、英語版などには影響しない。
+# これをtrueに設定すると、メイン画面の地形が全角文字で表示されるようになる。
+# 無指定の場合はfalseになる。falseでは地形は半角文字で表示される。
+# ゲーム途中での全角マップ/半角マップの切り替えは、記憶済み領域のマップ表示の
+# 文字化けを起こすためあまり推奨できないが、
+# ゲームを継続できないほどの問題は起こさない。
+
+use_zenkaku = false
+
+
+# use_cake
+# 壁の豆腐表示。
+# これをtrueに設定すると、ダンジョン壁が塗りつぶされた四角形で
+# 表示されるようになる。
+# 無指定の場合はfalseになる。falseでは壁は半角なら'#'、
+# 全角なら'■'で表示される。
+# ゲーム途中での切り替えは特に問題を起こさない。
+
+use_cake = false
+
+
+# channel.*
+# メッセージ表示オプション:
+#
+# 書式 channel.CHANNEL_NAME = (COLOUR|mute|default|on|off|plain)
+#
+# CHANNEL_NAME can currently be one of these:
+#   plain           = 通常のテキスト (白で表示される)
+#   prompt          = プレイヤーに対する入力要求テキスト
+#   god             = 神からのメッセージ
+#   duration        = 呪文/特殊能力の効果時間についてのメッセージ
+#   danger          = キャラクターの生存を脅かす事項についてのメッセージ
+#   food            = 食糧に関する警告文
+#   warning         = 上記以外の警告文
+#   recovery        = 病気などからの回復時のメッセージ
+#   talk            = モンスターの台詞など
+#   intrinsic_gain  = レベル/能力値などの獲得メッセージ
+#   mutation        = 突然変異の獲得/喪失メッセージ
+#   monster_spell   = モンスターの呪文詠唱についてのメッセージ
+#   monster_enchant = モンスターの魔法効果に関するメッセージ
+#   monster_damage  = モンスターがどれくらいダメージを受けているかについての
+#                     メッセージ
+#   rotten_meat     = 持っている肉/死体が腐敗した時のメッセージ
+#
+# メッセージの色は自由に変更できる。
+# 指定可能な色名:
+# black, blue, green, cyan, red, magenta, brown, lightgrey, darkgrey,
+# lightblue, lightgreen, lightcyan, lightred, lightmagenta, yellow, white
+# lightgray = lightgrey, darkgray = darkgrey
+#
+#
+# その他の表示オプション:
+#
+#   mute      = その種類のメッセージを非表示にする (危険。要注意)
+#   default   = その種類のメッセージ表示をデフォルト状態に戻す
+#   alternate = その種類のメッセージ表示を最適な色での表示にする
+#   on        = defaultと同じ
+#   plain     = メッセージ種"plain"に対して設定したのと同じ設定にする
+#               (channel.plain = mute である場合は同じようにmuteになる)
+#   off       = plainと同じ
+#
+# 注意:現在の所、monster_damageとgodは複数の色を持つメッセージ種である。
+# 例えばgodの色を指定した場合、
+# あらゆる神のメッセージが指定色で表示されることになる。
+#
+#
+# 例)
+# channel.plain = green
+# channel.talk = mute
+# channel.warning = plain
+# channel.diagnostic = mute
+# channel.rotten_meat = yellow
+# channel.god = alternate 
+# channel.mutation = green
+
+
+# stop_travel
+# 特定のメッセージをトラベルコマンドの停止条件として指定できる。
+# 「stop_travel = 文字列」の形式で必要なだけ書き連ねる。
+
+stop_travel = あなたの足元に何かが現れた,あなたの目の前に何かが現れた
