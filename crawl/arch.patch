@@ -1,0 +1,621 @@
+--- source-jp/acr.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/acr.cc	2011-07-22 13:01:44.000000000 +0900
+@@ -305,6 +305,7 @@
+         printf( " Best Crawlers -" EOL );
+ #endif
+         hiscores_print_list( Options.sc_entries, Options.sc_format );
++		get_ch();
+         exit(0);
+     }
+ 
+--- source-jp/AppHdr.h	2011-07-22 13:01:35.000000000 +0900
++++ source/AppHdr.h	2011-07-22 13:01:44.000000000 +0900
+@@ -408,7 +408,7 @@
+     // Setting it to nothing or not setting it will cause all game files to
+     // be dumped in the current directory.
+     //
+-    #define SAVE_DIR_PATH       "/opt/crawl/lib/"
++    #define SAVE_DIR_PATH       "/usr/share/crawl/save/"
+ 
+     // will make this little thing go away.  Define SAVE_PACKAGE_CMD
+     // to a command to compress and bundle the save game files into a
+@@ -420,9 +420,9 @@
+     //
+     // Comment these lines out if you want to leave the save files uncompressed.
+     //
+-    #define SAVE_PACKAGE_CMD    "/usr/bin/zip -m -q -j -1 %s.zip %s.*"
+-    #define LOAD_UNPACKAGE_CMD  "/usr/bin/unzip -q -o %s.zip -d" SAVE_DIR_PATH
+-    #define PACKAGE_SUFFIX      ".zip"
++    #define SAVE_PACKAGE_CMD    "/bin/tar --remove-files -cPzf %s.tar.gz %s.???"
++    #define LOAD_UNPACKAGE_CMD  "/bin/tar -xPpzf %s.tar.gz"
++    #define PACKAGE_SUFFIX      ".tar.gz"
+ 
+     // This provides some rudimentary protection against people using
+     // save file cheats on multi-user systems.
+--- source-jp/chardump.cc	2011-07-22 13:01:34.000000000 +0900
++++ source/chardump.cc	2011-07-22 13:01:44.000000000 +0900
+@@ -1591,8 +1591,8 @@
+ 
+ #ifdef STASH_TRACKING
+     char stash_file_name[kPathLen] = "";
+-
+     strncpy(stash_file_name, file_name, kPathLen);
++
+     if (strcmp(fname, "morgue.txt") != 0)
+     {
+         strncat(file_name, ".txt", kPathLen);
+@@ -1601,12 +1601,15 @@
+     }
+     else
+     {
+-        strncpy(stash_file_name, "morgue.lst", kPathLen);
++        if (SysEnv.crawl_dir)
++            strncpy(stash_file_name, SysEnv.crawl_dir, kPathLen);
++        strncat(stash_file_name, "morgue.lst", kPathLen);
+         stashes.dump(stash_file_name);
+     }//morgue.lst
+ #endif
+ 
+     FILE *handle = fopen(file_name, "wb");
++    fchown(fileno(handle), (uid_t)-1, getgid());
+ 
+ #if DEBUG_DIAGNOSTICS
+ #ifdef JP
+--- source-jp/describe.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/describe.cc	2011-07-22 13:01:44.000000000 +0900
+@@ -21,7 +21,7 @@
+ 
+ #include <stdlib.h>
+ #include <stdio.h>
+-#include <string>
++#include <string.h>
+ 
+ #ifdef DOS
+ #include <conio.h>
+--- source-jp/direct.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/direct.cc	2011-07-22 13:01:44.000000000 +0900
+@@ -1511,7 +1511,7 @@
+ 
+         if (mon_arm != NON_ITEM)
+         {
+-            it_name( mon_arm, DESC_PLAIN, str_pass );
++            it_name( mon_arm, DESC_NOCAP_A, str_pass );
+ #ifdef JP 
+             snprintf( info, INFO_SIZE, "%sは%sを着ている。", 
+ #else
+--- source-jp/effects.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/effects.cc	2011-07-22 13:01:44.000000000 +0900
+@@ -13,6 +13,7 @@
+ 
+ #include <string.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ 
+ #include "externs.h"
+ 
+--- source-jp/externs.h	2011-07-22 13:01:35.000000000 +0900
++++ source/externs.h	2011-07-22 13:04:16.000000000 +0900
+@@ -26,9 +26,9 @@
+ #include "Kills.h"
+ #include "message.h"
+ 
+-#define INFO_SIZE       200          // size of message buffers
+-#define ITEMNAME_SIZE   200          // size of item names/shop names/etc
+-#define HIGHSCORE_SIZE  800          // <= 10 Lines for long format scores
++#define INFO_SIZE       512          // size of message buffers
++#define ITEMNAME_SIZE   512          // size of item names/shop names/etc
++#define HIGHSCORE_SIZE  2048          // <= 10 Lines for long format scores
+ 
+ #define MAX_NUM_GODS    21
+ 
+--- source-jp/fight.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/fight.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -4052,8 +4052,8 @@
+             case MONS_SPINY_WORM:
+             case MONS_JELLYFISH:
+             case MONS_ORANGE_DEMON:
+-                if (attacker->type == MONS_SPINY_WORM || one_chance_in(20)
+-                    || (damage_taken > 3 && one_chance_in(4)))
++                if (!mons_res_poison(defender) && (attacker->type == MONS_SPINY_WORM || one_chance_in(20)
++                    || (damage_taken > 3 && one_chance_in(4))))
+                 {
+                     if (sees)
+                     {
+@@ -4079,8 +4079,8 @@
+ 
+             case MONS_KILLER_BEE:
+             case MONS_BUMBLEBEE:
+-                if (one_chance_in(20)
+-                    || (damage_taken > 2 && one_chance_in(3)))
++                if (!mons_res_poison(defender) && (one_chance_in(20)
++                    || (damage_taken > 2 && one_chance_in(3))))
+                 {
+                     if (sees)
+                     {
+@@ -4149,9 +4149,11 @@
+             case MONS_QUEEN_ANT:
+                 //if ((damage_taken > 2 && one_chance_in(3) ) || one_chance_in(20) )
+                 //{
+-                if (sees)
++                if(!mons_res_poison(defender))
+                 {
+-                    strcpy(info, ptr_monam(attacker, DESC_CAP_THE));
++                    if (sees)
++                    {
++                        strcpy(info, ptr_monam(attacker, DESC_CAP_THE));
+ #ifdef JP
+                         strcat(info, "は");
+                         strcpy(info, ptr_monam(defender, DESC_NOCAP_THE));
+@@ -4161,13 +4163,14 @@
+                         strcpy(info, ptr_monam(defender, DESC_NOCAP_THE));
+ #endif
+ #ifdef JP
+-                    strcat(info, "。");
++                        strcat(info, "。");
+ #else
+-                    strcat(info, ".");
++                        strcat(info, ".");
+ #endif
+-                    mpr(info);
++                        mpr(info);
++                    }
++                    poison_monster(defender, false);
+                 }
+-                poison_monster(defender, false);
+                 //}
+                 break;
+ 
+@@ -4181,7 +4184,7 @@
+             case MONS_ARMOUR_MIMIC:
+             case MONS_SCROLL_MIMIC:
+             case MONS_POTION_MIMIC:
+-                if (one_chance_in(20) || (damage_taken > 2 && one_chance_in(4)))
++                if (!mons_res_poison(defender) && (one_chance_in(20) || (damage_taken > 2 && one_chance_in(4))))
+                     poison_monster(defender, false);
+                 break;
+ 
+--- source-jp/food.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/food.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -1279,20 +1279,25 @@
+             restore_stat(STAT_ALL, false);
+             break;
+         case FOOD_PIZZA:
++             if (SysEnv.crawl_pizza && !one_chance_in(3))
+ #ifdef JP 
+-            strcpy(info, "むむむ……");
++                 snprintf(info, INFO_SIZE, "Mmm... %s", SysEnv.crawl_pizza);
+ #else
+-            strcpy(info, "Mmm... ");
++                 snprintf(info, INFO_SIZE, "むむむ…… %s", SysEnv.crawl_pizza);
+ #endif
++             else
++             {
++                 temp_rand = random2(9);
+ 
+-            if (SysEnv.crawl_pizza && !one_chance_in(3))
+-                strcat(info, SysEnv.crawl_pizza);
+-            else
+-            {
+-                temp_rand = random2(9);
++#ifdef JP 
++                 snprintf(info, INFO_SIZE, "むむむ…… %s",
++                             (temp_rand == 0) ? "ハム＆パイナップルピザだ。" :
++#else
++                 snprintf(info, INFO_SIZE, "Mmm... %s",
++                             (temp_rand == 0) ? "Ham and pineapple." :
++#endif
+ 
+ #ifdef JP 
+-                strcat(info, (temp_rand == 0) ? "ハム＆パイナップルピザだ。" :
+                              (temp_rand == 1) ? "とても厚いピザだ。" :
+                              (temp_rand == 2) ? "ベジタブルピザだ。" :
+                              (temp_rand == 3) ? "ペパローニピザだ。" :
+@@ -1302,7 +1307,6 @@
+                              (temp_rand == 7) ? "超最高にうまいピザだ！"
+                                               : "チキンピザだ。");
+ #else
+-                strcat(info, (temp_rand == 0) ? "Ham and pineapple." :
+                              (temp_rand == 1) ? "Extra thick crust." :
+                              (temp_rand == 2) ? "Vegetable." :
+                              (temp_rand == 3) ? "Pepperoni." :
+--- source-jp/hiscores.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/hiscores.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -29,6 +29,7 @@
+ #include <stdlib.h>
+ #include <stdio.h>
+ #include <ctype.h>
++#include <string.h>
+ 
+ #include "AppHdr.h"
+ #include "externs.h"
+@@ -1842,6 +1843,9 @@
+ {
+ #ifdef SAVE_DIR_PATH
+     FILE *handle = fopen(SAVE_DIR_PATH "scores", mode);
++#ifdef SHARED_FILES_CHMOD_PUBLIC
++    chmod(SAVE_DIR_PATH "scores", SHARED_FILES_CHMOD_PUBLIC);
++#endif
+ #else
+     FILE *handle = fopen("scores", mode);
+ #endif
+--- source-jp/initfile.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/initfile.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -15,7 +15,7 @@
+ 
+ #include <stdio.h>
+ #include <stdlib.h>
+-#include <string>
++#include <string.h>
+ #include <ctype.h>
+ 
+ #include "Kills.h"
+--- source-jp/items.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/items.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -3088,7 +3088,7 @@
+ //
+ // - equipment cannot be destroyed... not only is this the more accurate
+ //   than testing for curse status (to prevent easy removal of cursed items),
+-//   but the original code would leave all the equiped items properties
++//   but the original code would leave all the equipped items properties
+ //   (including weight) which would cause a bit of a mess to state.
+ //
+ // - no item does anything for just carrying it... if that changes then
+--- source-jp/it_use3.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/it_use3.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -15,6 +15,7 @@
+ #include "it_use3.h"
+ 
+ #include <string.h>
++#include <stdlib.h>
+ 
+ #include "externs.h"
+ 
+--- source-jp/Kills.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/Kills.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -47,12 +47,12 @@
+ #if defined(WIN32CONSOLE) || defined(WINDOWS)
+     kill &k = kills[descriptor];
+ #else
+-    kill::kill &k = kills[descriptor];
++    ___kill &k = kills[descriptor];
+ #endif
+     if (k.kills)
+         k.add_kill(mon, get_packed_place());
+     else
+-        k = kill::kill(mon);
++        k = ___kill(mon);
+ }
+ 
+ struct kill_exp {
+@@ -85,14 +85,14 @@
+     std::vector<kill_exp> all_kills;
+ 
+     long count = 0;
+-    std::map<___monster_desc, kill::kill, ___monster_desc::less_than>::
++    std::map<___monster_desc, ___kill, ___monster_desc::less_than>::
+         const_iterator iter = kills.begin();
+     for (; iter != kills.end(); ++iter) {
+         const ___monster_desc &md = iter->first;
+ #if defined(WIN32CONSOLE) || defined(WINDOWS)
+         const kill &k = iter->second;
+ #else
+-        const kill::kill &k = iter->second;
++        const ___kill &k = iter->second;
+ #endif
+         all_kills.push_back( kill_exp( k.exp, k.base_name(md), k.info(md) ) );
+         count += k.kills;
+@@ -200,7 +200,7 @@
+     // How many kill records do we have?
+     writeLong(file, kills.size());
+ 
+-    std::map<___monster_desc, kill::kill, ___monster_desc::less_than>::
++    std::map<___monster_desc, ___kill, ___monster_desc::less_than>::
+         const_iterator iter = kills.begin();
+     for ( ; iter != kills.end(); ++iter) {
+         iter->first.save(file);
+@@ -244,7 +244,7 @@
+     ghosts.push_back(ghost);
+ }
+ 
+-kill::kill(const struct monsters *mon) : kills(0), exp(0) {
++___kill::___kill(const struct monsters *mon) : kills(0), exp(0) {
+     exp = exper_value( (struct monsters *) mon);
+     add_kill(mon, get_packed_place());
+ }
+@@ -392,7 +392,7 @@
+     return std::string(buf);
+ }
+ 
+-void kill::add_kill(const struct monsters *mon, unsigned short place) {
++void ___kill::add_kill(const struct monsters *mon, unsigned short place) {
+     kills++;
+ 
+     for (unsigned i = 0; i < places.size(); ++i)
+@@ -402,7 +402,7 @@
+         places.push_back(place);
+ }
+ 
+-std::string kill::base_name(const ___monster_desc &md) const {
++std::string ___kill::base_name(const ___monster_desc &md) const {
+     char monnamebuf[ITEMNAME_SIZE];     // Le sigh.
+     moname(md.monnum, true, DESC_PLAIN, monnamebuf);
+ 
+@@ -478,7 +478,7 @@
+     return name;
+ }
+ 
+-std::string kill::info(const ___monster_desc &md) const {
++std::string ___kill::info(const ___monster_desc &md) const {
+ #ifdef JP
+     std::string name = (mons_is_unique(md.monnum))?
+         "         " + base_name(md) : base_name(md);
+@@ -514,7 +514,7 @@
+     return append_places(md, name);
+ }
+ 
+-std::string kill::append_places(const ___monster_desc &md,
++std::string ___kill::append_places(const ___monster_desc &md,
+                                 const std::string &name) const {
+     if (Options.dump_kill_places == KDO_NO_PLACES) return name;
+ 
+@@ -536,7 +536,7 @@
+     return name;
+ }
+ 
+-void kill::save(FILE *file) const {
++void ___kill::save(FILE *file) const {
+     writeShort(file, kills);
+     writeShort(file, exp);
+ 
+@@ -547,7 +547,7 @@
+     }
+ }
+ 
+-void kill::load(FILE *file) {
++void ___kill::load(FILE *file) {
+     kills = (unsigned short) readShort(file);
+     exp   = readShort(file);
+ 
+--- source-jp/Kills.h	2011-07-22 13:01:35.000000000 +0900
++++ source/Kills.h	2011-07-22 13:01:45.000000000 +0900
+@@ -39,10 +39,10 @@
+ };
+ 
+ #define PLACE_LIMIT 5   // How many unique kill places we're prepared to track
+-class kill {
++class ___kill {
+ public:
+-    kill(const struct monsters *mon);
+-    kill() : kills(0), exp(0) {
++    ___kill(const struct monsters *mon);
++    ___kill() : kills(0), exp(0) {
+         // This object just says to the world that it's uninitialized
+     }
+ 
+@@ -88,7 +88,7 @@
+ 
+     std::string kill_info() const;
+ private:
+-    std::map<___monster_desc, kill::kill, ___monster_desc::less_than> kills;
++    std::map<___monster_desc, ___kill, ___monster_desc::less_than> kills;
+     std::vector<kill_ghost> ghosts;
+ 
+     void record_ghost_kill(const struct monsters *mon);
+--- source-jp/libutil.cc	2011-07-22 13:01:34.000000000 +0900
++++ source/libutil.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -12,6 +12,7 @@
+ #include <stdio.h>
+ #include <string.h>
+ #include <ctype.h>
++#include <string.h>
+ 
+ #ifdef USE_MULTIWIN
+ #include "externs.h"
+--- source-jp/macro.cc	2011-07-22 13:01:34.000000000 +0900
++++ source/macro.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -34,7 +34,7 @@
+ 
+ #include <iostream>
+ #include <fstream>
+-#include <string>
++#include <string.h>
+ #include <map>
+ #include <deque>
+ 
+--- source-jp/makefile	2011-07-22 13:01:34.000000000 +0900
++++ source/makefile	2011-07-22 13:01:45.000000000 +0900
+@@ -8,7 +8,7 @@
+ 
+ #jmf: number of concurrent jobs -- good value is (#_of_CPUs * 2) + 1
+ #     cuts build time a lot on multi-cpu machines
+-OTHER=-j2
++OTHER=
+ 
+ all:
+ 	$(MAKE) $(OTHER) -f $(MAKEFILE) EXTRA_FLAGS='-O2 -fno-strength-reduce'
+--- source-jp/makefile.lnx	2011-07-22 13:01:35.000000000 +0900
++++ source/makefile.lnx	2011-07-22 13:01:45.000000000 +0900
+@@ -17,14 +17,14 @@
+ EXTRA_FLAGS = -DJP -DWIZARD
+ 
+ CFLAGS = -Wall -Wwrite-strings -Wstrict-prototypes \
+-            -Wmissing-prototypes \
+-            -g -D$(OS_TYPE) $(EXTRA_FLAGS)
++            -Wmissing-prototypes -Wno-char-subscripts\
++            -fsigned-char -g -D$(OS_TYPE) $(EXTRA_FLAGS) -L../../
+ 
+ # LDFLAGS = -static
+-MCHMOD = 2755
++MCHMOD = 4755
+ # INSTALLDIR = /usr/games
+-INSTALLDIR = /opt/crawl/bin
+-LIB = -lncurses
++INSTALLDIR = /usr/local/bin
++LIB = -ljncurses
+ 
+ # Include for Linux
+ INCLUDES = -I/usr/include/ncurses
+--- source-jp/message.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/message.cc	2011-07-22 13:04:57.000000000 +0900
+@@ -212,7 +212,7 @@
+ 
+ void mpr(const char *inf, int channel, int param)
+ {
+-    char info2[80];
++    char info2[INFO_SIZE];
+ 
+     int colour = channel_to_colour( channel, param );
+     if (colour == MSGCOL_MUTED)
+@@ -264,8 +264,8 @@
+     }
+     gotoxy( (Options.delay_message_clear) ? 2 : 1, Message_Line + 18 );
+ 
+-    strncpy(info2, inf, 78);
+-    info2[78] = 0;
++    strncpy(info2, inf, INFO_SIZE);
++    info2[INFO_SIZE - 1] = '\0';
+ 
+     textcolor( colour );
+ #ifdef USE_TILE
+--- source-jp/monplace.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/monplace.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -11,6 +11,8 @@
+ #include "AppHdr.h"
+ #include "monplace.h"
+ 
++#include <string.h>
++
+ #include "externs.h"
+ #include "dungeon.h"
+ #include "monstuff.h"
+--- source-jp/monstuff.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/monstuff.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -965,6 +965,7 @@
+     char str_polymon[INFO_SIZE] = "";      // cannot use info[] here {dlb}
+     bool player_messaged = false;
+     int source_power, target_power, relax;
++    int tries = 1000;
+ 
+     UNUSED( power );
+ 
+@@ -996,11 +997,17 @@
+                 return (simple_monster_message( monster, " shudders." ));
+ #endif
+         }
+-        while (!valid_morph( monster, targetc )
++        while (tries-- && (!valid_morph( monster, targetc )
+                 || target_power < source_power - relax
+-                || target_power > source_power + (relax * 3) / 2);
++                || target_power > source_power + (relax * 3) / 2));
+     }
+ 
++    if(!valid_morph( monster, targetc )) {
++        strcat( str_polymon, " doesn't look different.");
++        player_messaged = simple_monster_message( monster, str_polymon );
++        return (player_messaged);
++    }
++    
+     // messaging: {dlb}
+     bool invis = mons_flag( targetc, M_INVIS )
+                     || mons_has_ench( monster, ENCH_INVIS );
+--- source-jp/randart.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/randart.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -17,6 +17,7 @@
+ 
+ #include <string.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ 
+ #include "externs.h"
+ #include "itemname.h"
+--- source-jp/sendscore.cc	2011-07-22 13:01:36.000000000 +0900
++++ source/sendscore.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -16,6 +16,8 @@
+ #include "AppHdr.h"
+ #include "sendscore.h"
+ 
++#include <string.h>
++#include <stdlib.h>
+ #include <string>
+ 
+ #if defined(WINDOWS) || defined(WIN32CONSOLE)
+--- source-jp/skills2.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/skills2.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -21,6 +21,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <ctype.h>
++#include <string.h>
+ 
+ #ifdef DOS
+ #include <conio.h>
+@@ -120,7 +121,7 @@
+     {"予見術", "手相見", "占い", "占い師", "預言者", "神託者"},
+ #else
+     {"Spellcasting", "Magician", "Thaumaturge", "Eclecticist", "Sorcerer", "Archmage"},     // 25
+-    {"Conjurations", "Ruinous", "Conjurer", "Destroyer", "Devastator", "Annihilator"},
++    {"Conjurations", "Ruiner", "Conjurer", "Destroyer", "Devastator", "Annihilator"},
+     {"Enchantments", "Charm-Maker", "Infuser", "Bewitcher", "Enchanter", "Spellbinder"},
+     {"Summonings", "Caller", "Summoner", "Convoker", "Demonologist", "Hellbinder"},
+     {"Necromancy", "Grave Robber", "Reanimator", "Necromancer", "Thanatomancer", "%s of Death"},
+--- source-jp/spells4.cc	2011-07-22 13:01:34.000000000 +0900
++++ source/spells4.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -12,8 +12,9 @@
+ 
+ #include "AppHdr.h"
+ 
+-#include <string>
++#include <string.h>
+ #include <stdio.h>
++#include <stdlib.h>
+ 
+ #include "externs.h"
+ 
+--- source-jp/stash.cc	2011-07-22 13:01:36.000000000 +0900
++++ source/stash.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -16,10 +16,11 @@
+ #include "travel.h"
+ #include <fstream>
+ #include <stdio.h>
++#include <string.h>
+ #include <algorithm>
+ 
+-#include <iostream.h>
+-#include <iomanip.h>
++#include <iostream>
++#include <iomanip>
+ using namespace std;
+ 
+ 
+--- source-jp/tags.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/tags.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -76,6 +76,7 @@
+ #endif
+ 
+ #include "AppHdr.h"
++#include <stdlib.h>
+ 
+ #include "abl-show.h"
+ #include "enum.h"
+--- source-jp/travel.cc	2011-07-22 13:01:36.000000000 +0900
++++ source/travel.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -20,6 +20,8 @@
+ #include "travel.h"
+ #include "view.h"
+ #include <stdarg.h>
++#include <string.h>
++#include <stdlib.h>
+ #include <ctype.h>
+ 
+ #ifdef DOS
+--- source-jp/view.cc	2011-07-22 13:01:35.000000000 +0900
++++ source/view.cc	2011-07-22 13:01:45.000000000 +0900
+@@ -2741,7 +2741,7 @@
+ 
+     start_y = screen_y - half_screen;
+ 
+-    for (j = 0; j < num_lines; j++)
++    for (j = 0; j < (num_lines < map_lines ? num_lines : map_lines + 1); j++)
+     {
+         for (i = 0; i < 80; i++)
+         {
