@@ -1,15 +1,32 @@
---- source-jp/acr.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/acr.cc	2011-07-22 01:50:40.000000000 +0900
-@@ -305,6 +305,7 @@
+--- source-jp/acr.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/acr.cc	2011-07-22 11:44:15.000000000 +0900
+@@ -53,6 +53,7 @@
+ #include <string.h>
+ #include <fcntl.h>
+ #include <stdio.h>
++#include <locale.h>
+ 
+ #ifdef DOS
+ #include <dos.h>
+@@ -218,6 +219,8 @@
+ int main( int argc, char *argv[] )
+ #endif
+ {
++    setlocale(LC_ALL, "");
++
+ #ifdef USE_ASCII_CHARACTERS
+     // Default to the non-ibm set when it makes sense.
+     //ÈÄöÂ∏∏„ÅÆÂçäËßíÂú∞Âõ≥„ÇÇ„Åì„Å°„Çâ„ÄÇ
+@@ -305,6 +308,7 @@
          printf( " Best Crawlers -" EOL );
  #endif
          hiscores_print_list( Options.sc_entries, Options.sc_format );
-+		get_ch();
++        get_ch();
          exit(0);
      }
  
---- source-jp/AppHdr.h	2011-07-22 01:50:12.000000000 +0900
-+++ source/AppHdr.h	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/AppHdr.h	2011-07-22 12:04:38.000000000 +0900
++++ source/AppHdr.h	2011-07-22 11:44:15.000000000 +0900
 @@ -408,7 +408,7 @@
      // Setting it to nothing or not setting it will cause all game files to
      // be dumped in the current directory.
@@ -32,8 +49,8 @@
  
      // This provides some rudimentary protection against people using
      // save file cheats on multi-user systems.
---- source-jp/chardump.cc	2011-07-22 01:50:11.000000000 +0900
-+++ source/chardump.cc	2011-07-22 01:52:15.000000000 +0900
+--- source-jp/chardump.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/chardump.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -1591,8 +1591,8 @@
  
  #ifdef STASH_TRACKING
@@ -61,8 +78,8 @@
  
  #if DEBUG_DIAGNOSTICS
  #ifdef JP
---- source-jp/describe.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/describe.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/describe.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/describe.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -21,7 +21,7 @@
  
  #include <stdlib.h>
@@ -72,8 +89,8 @@
  
  #ifdef DOS
  #include <conio.h>
---- source-jp/direct.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/direct.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/direct.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/direct.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -1511,7 +1511,7 @@
  
          if (mon_arm != NON_ITEM)
@@ -81,10 +98,10 @@
 -            it_name( mon_arm, DESC_PLAIN, str_pass );
 +            it_name( mon_arm, DESC_NOCAP_A, str_pass );
  #ifdef JP 
-             snprintf( info, INFO_SIZE, "%s§œ%s§Ú√Â§∆§§§Î°£", 
+             snprintf( info, INFO_SIZE, "%s„ÅØ%s„ÇíÁùÄ„Å¶„ÅÑ„Çã„ÄÇ", 
  #else
---- source-jp/effects.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/effects.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/effects.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/effects.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -13,6 +13,7 @@
  
  #include <string.h>
@@ -93,8 +110,23 @@
  
  #include "externs.h"
  
---- source-jp/fight.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/fight.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/externs.h	2011-07-22 12:04:38.000000000 +0900
++++ source/externs.h	2011-07-22 11:44:15.000000000 +0900
+@@ -26,9 +26,9 @@
+ #include "Kills.h"
+ #include "message.h"
+ 
+-#define INFO_SIZE       200          // size of message buffers
+-#define ITEMNAME_SIZE   200          // size of item names/shop names/etc
+-#define HIGHSCORE_SIZE  800          // <= 10 Lines for long format scores
++#define INFO_SIZE       1024          // size of message buffers
++#define ITEMNAME_SIZE   1024          // size of item names/shop names/etc
++#define HIGHSCORE_SIZE  4096          // <= 10 Lines for long format scores
+ 
+ #define MAX_NUM_GODS    21
+ 
+--- source-jp/fight.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/fight.cc	2011-07-22 11:59:01.000000000 +0900
 @@ -4052,8 +4052,8 @@
              case MONS_SPINY_WORM:
              case MONS_JELLYFISH:
@@ -117,7 +149,7 @@
                  {
                      if (sees)
                      {
-@@ -4149,25 +4149,28 @@
+@@ -4149,9 +4149,11 @@
              case MONS_QUEEN_ANT:
                  //if ((damage_taken > 2 && one_chance_in(3) ) || one_chance_in(20) )
                  //{
@@ -125,33 +157,26 @@
 +                if(!mons_res_poison(defender))
                  {
 -                    strcpy(info, ptr_monam(attacker, DESC_CAP_THE));
-+                       if (sees)
-+                       {
-+                       strcpy(info, ptr_monam(attacker, DESC_CAP_THE));
++                    if (sees)
++                    {
++                        strcpy(info, ptr_monam(attacker, DESC_CAP_THE));
  #ifdef JP
--                        strcat(info, "§œ");
--                        strcpy(info, ptr_monam(defender, DESC_NOCAP_THE));
--                        strcat(info, "§Úª…§∑§ø");
-+                       strcat(info, "§œ");
-+                       strcpy(info, ptr_monam(defender, DESC_NOCAP_THE));
-+                       strcat(info, "§Úª…§∑§ø");
- #else
--                        strcat(info, " stings ");
--                        strcpy(info, ptr_monam(defender, DESC_NOCAP_THE));
-+                       strcat(info, " stings ");
-+                       strcpy(info, ptr_monam(defender, DESC_NOCAP_THE));
+                         strcat(info, "„ÅØ");
+                         strcpy(info, ptr_monam(defender, DESC_NOCAP_THE));
+@@ -4161,13 +4163,14 @@
+                         strcpy(info, ptr_monam(defender, DESC_NOCAP_THE));
  #endif
  #ifdef JP
--                    strcat(info, "°£");
-+                       strcat(info, "°£");
+-                    strcat(info, "„ÄÇ");
++                        strcat(info, "„ÄÇ");
  #else
 -                    strcat(info, ".");
-+                       strcat(info, ".");
++                        strcat(info, ".");
  #endif
 -                    mpr(info);
-+                       mpr(info);
-+                       }
-+                       poison_monster(defender, false);
++                        mpr(info);
++                    }
++                    poison_monster(defender, false);
                  }
 -                poison_monster(defender, false);
                  //}
@@ -166,52 +191,52 @@
                      poison_monster(defender, false);
                  break;
  
---- source-jp/food.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/food.cc	2011-07-22 01:50:40.000000000 +0900
-@@ -1279,20 +1279,25 @@
+--- source-jp/food.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/food.cc	2011-07-22 12:02:44.000000000 +0900
+@@ -1279,20 +1279,24 @@
              restore_stat(STAT_ALL, false);
              break;
          case FOOD_PIZZA:
 +             if (SysEnv.crawl_pizza && !one_chance_in(3))
  #ifdef JP 
--            strcpy(info, "§‡§‡§‡°ƒ°ƒ");
-+                snprintf(info, INFO_SIZE, "Mmm... %s", SysEnv.crawl_pizza);
+-            strcpy(info, "„ÇÄ„ÇÄ„ÇÄ‚Ä¶‚Ä¶");
++                 snprintf(info, INFO_SIZE, "Mmm... %s", SysEnv.crawl_pizza);
  #else
 -            strcpy(info, "Mmm... ");
-+                snprintf(info, INFO_SIZE, "§‡§‡§‡°ƒ°ƒ %s", SysEnv.crawl_pizza);
- #endif
++                 snprintf(info, INFO_SIZE, "„ÇÄ„ÇÄ„ÇÄ‚Ä¶‚Ä¶ %s", SysEnv.crawl_pizza);
++#endif
 +             else
 +             {
 +                 temp_rand = random2(9);
- 
++#ifdef JP 
++                 snprintf(info, INFO_SIZE, "„ÇÄ„ÇÄ„ÇÄ‚Ä¶‚Ä¶ %s",
++                             (temp_rand == 0) ? "„Éè„É†ÔºÜ„Éë„Ç§„Éä„ÉÉ„Éó„É´„Éî„Ç∂„Å†„ÄÇ" :
++#else
++                 snprintf(info, INFO_SIZE, "Mmm... %s",
++                             (temp_rand == 0) ? "Ham and pineapple." :
+ #endif
+-
 -            if (SysEnv.crawl_pizza && !one_chance_in(3))
 -                strcat(info, SysEnv.crawl_pizza);
 -            else
 -            {
 -                temp_rand = random2(9);
-+#ifdef JP 
-+                snprintf(info, INFO_SIZE, "§‡§‡§‡°ƒ°ƒ %s",
-+                             (temp_rand == 0) ? "•œ•‡°ı•—•§• •√•◊•Î•‘•∂§¿°£" :
-+#else
-+                snprintf(info, INFO_SIZE, "Mmm... %s",
-+                             (temp_rand == 0) ? "Ham and pineapple." :
-+#endif
  
  #ifdef JP 
--                strcat(info, (temp_rand == 0) ? "•œ•‡°ı•—•§• •√•◊•Î•‘•∂§¿°£" :
-                              (temp_rand == 1) ? "§»§∆§‚∏¸§§•‘•∂§¿°£" :
-                              (temp_rand == 2) ? "•Ÿ•∏•ø•÷•Î•‘•∂§¿°£" :
-                              (temp_rand == 3) ? "•⁄•—•Ì°º•À•‘•∂§¿°£" :
-@@ -1302,7 +1307,6 @@
-                              (temp_rand == 7) ? "ƒ∂∫«π‚§À§¶§ﬁ§§•‘•∂§¿°™"
-                                               : "•¡•≠•Û•‘•∂§¿°£");
+-                strcat(info, (temp_rand == 0) ? "„Éè„É†ÔºÜ„Éë„Ç§„Éä„ÉÉ„Éó„É´„Éî„Ç∂„Å†„ÄÇ" :
+                              (temp_rand == 1) ? "„Å®„Å¶„ÇÇÂéö„ÅÑ„Éî„Ç∂„Å†„ÄÇ" :
+                              (temp_rand == 2) ? "„Éô„Ç∏„Çø„Éñ„É´„Éî„Ç∂„Å†„ÄÇ" :
+                              (temp_rand == 3) ? "„Éö„Éë„É≠„Éº„Éã„Éî„Ç∂„Å†„ÄÇ" :
+@@ -1302,7 +1306,6 @@
+                              (temp_rand == 7) ? "Ë∂ÖÊúÄÈ´ò„Å´„ÅÜ„Åæ„ÅÑ„Éî„Ç∂„Å†ÔºÅ"
+                                               : "„ÉÅ„Ç≠„É≥„Éî„Ç∂„Å†„ÄÇ");
  #else
 -                strcat(info, (temp_rand == 0) ? "Ham and pineapple." :
                               (temp_rand == 1) ? "Extra thick crust." :
                               (temp_rand == 2) ? "Vegetable." :
                               (temp_rand == 3) ? "Pepperoni." :
---- source-jp/hiscores.cc	2011-07-22 01:50:13.000000000 +0900
-+++ source/hiscores.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/hiscores.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/hiscores.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -29,6 +29,7 @@
  #include <stdlib.h>
  #include <stdio.h>
@@ -230,8 +255,8 @@
  #else
      FILE *handle = fopen("scores", mode);
  #endif
---- source-jp/initfile.cc	2011-07-22 01:50:13.000000000 +0900
-+++ source/initfile.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/initfile.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/initfile.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -15,7 +15,7 @@
  
  #include <stdio.h>
@@ -241,8 +266,8 @@
  #include <ctype.h>
  
  #include "Kills.h"
---- source-jp/items.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/items.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/items.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/items.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -3088,7 +3088,7 @@
  //
  // - equipment cannot be destroyed... not only is this the more accurate
@@ -252,8 +277,8 @@
  //   (including weight) which would cause a bit of a mess to state.
  //
  // - no item does anything for just carrying it... if that changes then
---- source-jp/it_use3.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/it_use3.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/it_use3.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/it_use3.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -15,6 +15,7 @@
  #include "it_use3.h"
  
@@ -262,8 +287,8 @@
  
  #include "externs.h"
  
---- source-jp/Kills.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/Kills.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/Kills.cc	2011-07-22 12:04:38.000000000 +0900
++++ source/Kills.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -47,12 +47,12 @@
  #if defined(WIN32CONSOLE) || defined(WINDOWS)
      kill &k = kills[descriptor];
@@ -368,8 +393,8 @@
      kills = (unsigned short) readShort(file);
      exp   = readShort(file);
  
---- source-jp/Kills.h	2011-07-22 01:50:12.000000000 +0900
-+++ source/Kills.h	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/Kills.h	2011-07-22 12:04:38.000000000 +0900
++++ source/Kills.h	2011-07-22 11:44:15.000000000 +0900
 @@ -39,10 +39,10 @@
  };
  
@@ -393,8 +418,8 @@
      std::vector<kill_ghost> ghosts;
  
      void record_ghost_kill(const struct monsters *mon);
---- source-jp/libutil.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/libutil.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/libutil.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/libutil.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -12,6 +12,7 @@
  #include <stdio.h>
  #include <string.h>
@@ -403,8 +428,8 @@
  
  #ifdef USE_MULTIWIN
  #include "externs.h"
---- source-jp/macro.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/macro.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/macro.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/macro.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -34,7 +34,7 @@
  
  #include <iostream>
@@ -414,19 +439,19 @@
  #include <map>
  #include <deque>
  
---- source-jp/makefile	2011-07-22 01:50:11.000000000 +0900
-+++ source/makefile	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/makefile	2003-03-23 20:05:12.000000000 +0900
++++ source/makefile	2011-07-22 11:44:15.000000000 +0900
 @@ -8,7 +8,7 @@
  
  #jmf: number of concurrent jobs -- good value is (#_of_CPUs * 2) + 1
  #     cuts build time a lot on multi-cpu machines
 -OTHER=-j2
-+OTHER=
++OTHER=-j3
  
  all:
  	$(MAKE) $(OTHER) -f $(MAKEFILE) EXTRA_FLAGS='-O2 -fno-strength-reduce'
---- source-jp/makefile.lnx	2011-07-22 01:50:12.000000000 +0900
-+++ source/makefile.lnx	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/makefile.lnx	2011-07-22 12:04:39.000000000 +0900
++++ source/makefile.lnx	2011-07-22 11:44:15.000000000 +0900
 @@ -17,14 +17,14 @@
  EXTRA_FLAGS = -DJP -DWIZARD
  
@@ -434,7 +459,7 @@
 -            -Wmissing-prototypes \
 -            -g -D$(OS_TYPE) $(EXTRA_FLAGS)
 +            -Wmissing-prototypes -Wno-char-subscripts\
-+            -fsigned-char -g -D$(OS_TYPE) $(EXTRA_FLAGS) -L../../
++            -fsigned-char -g -D$(OS_TYPE) $(EXTRA_FLAGS)
  
  # LDFLAGS = -static
 -MCHMOD = 2755
@@ -443,12 +468,34 @@
 -INSTALLDIR = /opt/crawl/bin
 -LIB = -lncurses
 +INSTALLDIR = /usr/local/bin
-+LIB = -ljncurses
++LIB = -lncursesw
  
  # Include for Linux
  INCLUDES = -I/usr/include/ncurses
---- source-jp/monplace.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/monplace.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/message.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/message.cc	2011-07-22 11:44:15.000000000 +0900
+@@ -212,7 +212,7 @@
+ 
+ void mpr(const char *inf, int channel, int param)
+ {
+-    char info2[80];
++    char info2[INFO_SIZE];
+ 
+     int colour = channel_to_colour( channel, param );
+     if (colour == MSGCOL_MUTED)
+@@ -264,8 +264,8 @@
+     }
+     gotoxy( (Options.delay_message_clear) ? 2 : 1, Message_Line + 18 );
+ 
+-    strncpy(info2, inf, 78);
+-    info2[78] = 0;
++    strncpy(info2, inf, INFO_SIZE);
++    info2[INFO_SIZE - 1] = '\0';
+ 
+     textcolor( colour );
+ #ifdef USE_TILE
+--- source-jp/monplace.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/monplace.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -11,6 +11,8 @@
  #include "AppHdr.h"
  #include "monplace.h"
@@ -458,8 +505,8 @@
  #include "externs.h"
  #include "dungeon.h"
  #include "monstuff.h"
---- source-jp/monstuff.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/monstuff.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/monstuff.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/monstuff.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -965,6 +965,7 @@
      char str_polymon[INFO_SIZE] = "";      // cannot use info[] here {dlb}
      bool player_messaged = false;
@@ -488,8 +535,8 @@
      // messaging: {dlb}
      bool invis = mons_flag( targetc, M_INVIS )
                      || mons_has_ench( monster, ENCH_INVIS );
---- source-jp/randart.cc	2011-07-22 01:50:13.000000000 +0900
-+++ source/randart.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/randart.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/randart.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -17,6 +17,7 @@
  
  #include <string.h>
@@ -498,8 +545,8 @@
  
  #include "externs.h"
  #include "itemname.h"
---- source-jp/sendscore.cc	2011-07-22 01:50:13.000000000 +0900
-+++ source/sendscore.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/sendscore.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/sendscore.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -16,6 +16,8 @@
  #include "AppHdr.h"
  #include "sendscore.h"
@@ -509,8 +556,8 @@
  #include <string>
  
  #if defined(WINDOWS) || defined(WIN32CONSOLE)
---- source-jp/skills2.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/skills2.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/skills2.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/skills2.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -21,6 +21,7 @@
  #include <stdio.h>
  #include <stdlib.h>
@@ -520,7 +567,7 @@
  #ifdef DOS
  #include <conio.h>
 @@ -120,7 +121,7 @@
-     {"ÕΩ∏´Ω—", "ºÍ¡Í∏´", "¿Í§§", "¿Í§§ª’", "Õ¬∏¿º‘", "ø¿¬˜º‘"},
+     {"‰∫àË¶ãË°ì", "ÊâãÁõ∏Ë¶ã", "Âç†„ÅÑ", "Âç†„ÅÑÂ∏´", "È†êË®ÄËÄÖ", "Á•ûË®óËÄÖ"},
  #else
      {"Spellcasting", "Magician", "Thaumaturge", "Eclecticist", "Sorcerer", "Archmage"},     // 25
 -    {"Conjurations", "Ruinous", "Conjurer", "Destroyer", "Devastator", "Annihilator"},
@@ -528,8 +575,8 @@
      {"Enchantments", "Charm-Maker", "Infuser", "Bewitcher", "Enchanter", "Spellbinder"},
      {"Summonings", "Caller", "Summoner", "Convoker", "Demonologist", "Hellbinder"},
      {"Necromancy", "Grave Robber", "Reanimator", "Necromancer", "Thanatomancer", "%s of Death"},
---- source-jp/spells4.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/spells4.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/spells4.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/spells4.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -12,8 +12,9 @@
  
  #include "AppHdr.h"
@@ -541,8 +588,8 @@
  
  #include "externs.h"
  
---- source-jp/stash.cc	2011-07-22 01:50:13.000000000 +0900
-+++ source/stash.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/stash.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/stash.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -16,10 +16,11 @@
  #include "travel.h"
  #include <fstream>
@@ -557,8 +604,8 @@
  using namespace std;
  
  
---- source-jp/tags.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/tags.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/tags.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/tags.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -76,6 +76,7 @@
  #endif
  
@@ -567,8 +614,8 @@
  
  #include "abl-show.h"
  #include "enum.h"
---- source-jp/travel.cc	2011-07-22 01:50:13.000000000 +0900
-+++ source/travel.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/travel.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/travel.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -20,6 +20,8 @@
  #include "travel.h"
  #include "view.h"
@@ -578,8 +625,8 @@
  #include <ctype.h>
  
  #ifdef DOS
---- source-jp/view.cc	2011-07-22 01:50:12.000000000 +0900
-+++ source/view.cc	2011-07-22 01:50:40.000000000 +0900
+--- source-jp/view.cc	2011-07-22 12:04:39.000000000 +0900
++++ source/view.cc	2011-07-22 11:44:15.000000000 +0900
 @@ -2741,7 +2741,7 @@
  
      start_y = screen_y - half_screen;

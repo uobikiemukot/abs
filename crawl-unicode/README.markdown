@@ -1,10 +1,10 @@
-# crawl: Linley's Dungeon Crawl
+# crawl-unicode: Linley's Dungeon Crawl
 
 ## feature
 * apply following patch
  * japanese localization
  * archlinux patch (bug fix?)
- * and trivial fix (for compile)
+ * unicode patch (original but ad-hoc)
 
 ## ref
 * Linley's Dungeon Crawl
