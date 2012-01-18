@@ -1,0 +1,60 @@
+--- twitter.c	2012-01-18 10:04:25.000000000 +0900
++++ twitter_fav.c	2012-01-18 10:04:58.000000000 +0900
+@@ -553,6 +553,32 @@
+ 		in_reply_to = id;
+ 	} else if (g_strcasecmp(cmd[0], "post") == 0) {
+ 		message += 5;
++	} else if (g_strcasecmp(cmd[0], "fav") == 0 && cmd[1]) {
++		struct twitter_user_data *tud;
++		bee_user_t *bu;
++		guint64 id;
++
++		if (g_str_has_prefix(cmd[1], "#") &&
++		    sscanf(cmd[1] + 1, "%" G_GUINT64_FORMAT, &id) == 1) {
++			if (id < TWITTER_LOG_LENGTH && td->log)
++				id = td->log[id].id;
++		} else if ((bu = bee_user_by_handle(ic->bee, ic, cmd[1])) &&
++		    (tud = bu->data) && tud->last_id)
++			id = tud->last_id;
++		else if (sscanf(cmd[1], "%" G_GUINT64_FORMAT, &id) == 1){
++			if (id < TWITTER_LOG_LENGTH && td->log)
++				id = td->log[id].id;
++		}
++
++		td->last_status_id = 0;
++		if (id)
++			twitter_favorite_create(ic, id);
++		else
++			twitter_msg(ic, "User `%s' does not exist or didn't "
++				    "post any statuses recently", cmd[1]);
++
++		g_free(cmds);
++		return;
+ 	}
+ 
+ 	{
+--- twitter_lib.h	2012-01-18 10:04:25.000000000 +0900
++++ twitter_lib_fav.h	2012-01-18 10:04:58.000000000 +0900
+@@ -87,5 +87,7 @@
+ void twitter_status_destroy(struct im_connection *ic, guint64 id);
+ void twitter_status_retweet(struct im_connection *ic, guint64 id);
+ 
++void twitter_favorite_create(struct im_connection *ic, guint64 id);
++
+ #endif //_TWITTER_LIB_H
+ 
+--- twitter_lib.c	2012-01-18 10:04:25.000000000 +0900
++++ twitter_lib_fav.c	2012-01-18 10:04:58.000000000 +0900
+@@ -1055,3 +1055,12 @@
+ 	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
+ 	g_free(url);
+ }
++
++void twitter_favorite_create(struct im_connection *ic, guint64 id)
++{
++	char *url;
++	url = g_strdup_printf("%s%llu%s", TWITTER_FAVORITE_CREATE_URL,
++	                      (unsigned long long) id, ".xml");
++	twitter_http(ic, url, twitter_http_post, ic, 1, NULL, 0);
++	g_free(url);
++}
