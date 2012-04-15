@@ -1,4 +1,4 @@
-# crawl-unicode: Linley's Dungeon Crawl
+# crawl-unicode: Linley's Dungeon Crawl (UTF-8)
 
 ## feature
 * apply following patch

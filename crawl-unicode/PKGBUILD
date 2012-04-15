@@ -6,7 +6,7 @@ pkgdesc="Linley's Dungeon Crawl roguelike"
 arch=('i686' 'x86_64')
 url="http://gitorious.org/ffmpeg/ffmpeg-mt"
 license=('custom:crawl')
-depends=('')
+depends=()
 provide=('crawl')
 conflict=('crawl')
 makedepends=('nkf')
@@ -19,7 +19,7 @@ build() {
 	cd $srcdir/dc400b26-src/source
 	nkf -Lu -d --overwrite makefile.bor
 	nkf -Lu -d -w $srcdir/dc_j071_070315_src/dc400b26j071.pat | patch -p1
-	patch -p1 < $srcdir/unicode.patch 
+	patch -p2 < $srcdir/unicode.patch 
 	make -f makefile.lnx
 
 	# install
@@ -31,7 +31,7 @@ build() {
 	install -m 644 -D licence.txt $pkgdir/usr/share/licenses/crawl/COPYING
 }
 
-md5sums=('75a9b020a7eb8779e0036e2edcdc80f5'
+md5sums=('f2ad49d32610df2555844b4adf2c9b14'
          '4dabd3596eef9249798d33657a909c98'
          'fed44cf5fc5e9e7f45ef377998505728'
          'ef72d0d6c264a61fb5b0577c2b219f50')
