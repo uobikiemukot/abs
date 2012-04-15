@@ -1,5 +1,5 @@
---- source-jp/acr.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/acr.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/acr.cc	2012-04-15 23:25:38.484090170 +0900
++++ ./source-unicode/acr.cc	2012-04-13 16:25:49.667816614 +0900
 @@ -53,6 +53,7 @@
  #include <string.h>
  #include <fcntl.h>
@@ -25,8 +25,55 @@
          exit(0);
      }
  
---- source-jp/AppHdr.h	2011-07-22 12:04:38.000000000 +0900
-+++ source/AppHdr.h	2011-07-22 11:44:15.000000000 +0900
+@@ -1905,29 +1909,13 @@
+     case CMD_EXPERIENCE_CHECK:
+ #if 1
+     {
+-        clrscr();
+-        gotoxy(1,1);
+-        char buffer[25*3][45];
+-        int i;
+-        int dump_x = 1;
+-        int dump_y = 1;
+-
+-        get_full_detail(&buffer[0][0], false);
++        std::string text;
+ 
+-        for(i=0; i<25; i++)
+-        {
+-            gotoxy(1, i + 1);
+-            if (buffer[i][0] != '\0')
+-                cprintf ("%s\0", &buffer[i][0]);
+-
+-            gotoxy(29, i + 1);
+-            if (buffer[i + 25][0] != '\0')
+-                cprintf ("%s\0", &buffer[i + 25][0]);
++        clrscr();
++        get_full_detail(text, false);
+ 
+-            gotoxy(49, i + 1);
+-            if (buffer[i + 50][0] != '\0')
+-                cprintf ("%s\0", &buffer[i + 50][0]);
+-        }
++        gotoxy(1, 1);
++        cprintf(text.c_str());
+     }
+ 
+ #ifndef USE_MULTIWIN // skip getch
+@@ -2024,9 +2012,9 @@
+ #endif
+         else
+ #ifdef JP
+-            strcat(info, "残念ながらキャラクターのダンプは失敗しました。");
++            strcpy(info, "残念ながらキャラクターのダンプは失敗しました。");
+ #else
+-            strcat(info, "Char dump unsuccessful! Sorry about that.");
++            strcpy(info, "Char dump unsuccessful! Sorry about that.");
+ #endif
+         mpr(info);
+         break;
+--- ./source-old/AppHdr.h	2012-04-15 23:25:38.300757142 +0900
++++ ./source-unicode/AppHdr.h	2012-04-08 21:40:24.989347265 +0900
 @@ -408,7 +408,7 @@
      // Setting it to nothing or not setting it will cause all game files to
      // be dumped in the current directory.
@@ -49,9 +96,700 @@
  
      // This provides some rudimentary protection against people using
      // save file cheats on multi-user systems.
---- source-jp/chardump.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/chardump.cc	2011-07-22 11:44:15.000000000 +0900
-@@ -1591,8 +1591,8 @@
+--- ./source-old/chardump.cc	2012-04-15 23:25:38.594089731 +0900
++++ ./source-unicode/chardump.cc	2012-04-13 23:27:37.172289330 +0900
+@@ -17,6 +17,7 @@
+ #include "chardump.h"
+ 
+ #include <string>
++#include <sstream>
+ #include <stdio.h>
+ #include <string.h>
+ #include <fcntl.h>
+@@ -61,46 +62,11 @@
+ #include "version.h"
+ #include "view.h"
+ 
++#define LINEWIDTH 128
++
+ // Defined in view.cc
+ extern unsigned char (*mapch2) (unsigned char);
+ 
+-
+-#ifdef JP
+-static unsigned char ascii_to_zenkaku[2*256+1] ="\
+-　！”■＄％＆’（）＊＋，−．／\
+-０１２３４５６７８９：；＜＝＞？\
+-＠ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯ\
+-ＰＱＲＳＴＵＶＷＸＹＺ［＼］＾＿\
+-‘ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏ\
+-ｐｑｒｓｔｕｖｗｘｙｚ｛｜｝〜■\
+-回《・Π∩●□≡》※■■■巛‰";
+-
+-/*
+- 0 1 2 3 4 5 6 7 8 9 A B C D E F
+-128:回閉じたドア 129:《特殊階段 130:・床          131:Π祭壇
+-132:∩入口       133:● 噴水    134:□ 開いたドア 135:≡ 水
+-136:》特殊階段   137:※蜂の巣   138:■石の壁      139:■金属の壁
+-140:■水晶の壁   141:巛 溶岩    142:‰死体
+-*/
+-#endif /* JP */
+-
+-
+- // ========================================================================
+- //      Internal Functions
+- // ========================================================================
+-
+- // fillstring() is a hack to get around a missing constructor in
+- // Borland C++ implementation of the STD basic_string.   Argh!!!
+-static std::string fillstring(size_t strlen, char filler)
+-{
+-    std::string s;
+-
+-    for (size_t i=0; i<strlen; i++)
+-        s += filler;
+-
+-    return s;
+-}
+-
+  //---------------------------------------------------------------
+  //
+  // munge_description
+@@ -114,74 +80,27 @@
+  //---------------------------------------------------------------
+ std::string munge_description(const std::string & inStr)
+ {
+-    std::string modStr;
++	char ch;
++	long i = 0;
+     std::string outStr;
+ 
+-    modStr = inStr;
+-    outStr.reserve(modStr.length() + 32);
+-
+-    const long kIndent = 3;
+-    long lineLen = kIndent;
+-
+-    long i = 0;
+-
+-    outStr += fillstring(kIndent, ' ');
+-
+-    while (modStr[modStr.length() - 1] == '$')    //!!!
+-        modStr.erase( (modStr.length() - 1), 1 );
+-
+-    while (i < (long) modStr.length())
++    while (i < (long) inStr.length())
+     {
+-        char ch = modStr[i];
++        ch = inStr[i];
+ 
+         if (ch == '$')
+         {
+-            if ( (i + 1) != (long)modStr.length() )
++            if ( (i + 1) != (long)inStr.length() )
+             {
+                 outStr += EOL;
+-                outStr += fillstring(kIndent, ' ');
+-                lineLen = kIndent;
+             }
+-
+-            while (modStr[++i] == '$')
+-            ;
+-        }
+-        else if (isspace(ch))
+-        {
+-            if (lineLen >= 79)
+-            {
+-                outStr += EOL;
+-                outStr += fillstring(kIndent, ' ');
+-                lineLen = kIndent;
+-
+-            }
+-            else if (lineLen > 0)
+-            {
+-                outStr += ch;
+-                ++lineLen;
+-            }
+-            ++i;
++			while ( inStr[++i] == '$' )
++				;
+         }
+         else
+         {
+-            std::string word;
+-
+-            while (i < (long) modStr.length()
+-                   && lineLen + (long) word.length() < 79
+-                   && !isspace(modStr[i]) && modStr[i] != '$')
+-            {
+-                word += modStr[i++];
+-            }
+-
+-            if (lineLen + word.length() >= 79)
+-            {
+-                outStr += EOL;
+-                outStr += fillstring(kIndent, ' ');
+-                lineLen = kIndent;
+-            }
+-
+-            outStr += word;
+-            lineLen += word.length();
++            outStr += ch;
++			i++;
+         }
+     }
+ 
+@@ -190,7 +109,6 @@
+     return (outStr);
+ }                               // end munge_description()
+ 
+-
+  //---------------------------------------------------------------
+  //
+  // dump_screenshot
+@@ -214,7 +132,7 @@
+         text += "  Last messages:";
+ #endif
+         text += EOL;
+-        text += get_last_messages(Options.dump_message_count);
++        text += get_last_messages(Options.dump_message_count); // <-- freeze!
+         text += EOL;
+     }
+ #ifdef JP
+@@ -303,11 +221,9 @@
+     if (bufcount > maxbuf) maxbuf = bufcount;
+ 
+     // 33 columns and a null terminator. More hardcoding. :-(
+-    char buf [34];
++    char buf[34];
+     char buf2[34];
+-    char buf3[68];
+     char *s = buf;
+-    int  count;
+     for (int i = 0; i < maxbuf; )
+     {
+         *s++ = buffy[i]? buffy[i] : ' ';
+@@ -318,30 +234,9 @@
+             *s = 0;
+             while (s > buf && *--s == ' ')
+                 *s = 0;
+-            snprintf(buf2, 34, "%-33s\0", buf);
+-
+-            if (UseZenkaku || UseTile)
+-            {
+-                for(count = 0; count < 34; count++)
+-                {
+-                    if ( buf2[count] >= ' ' )
+-                    {
+-                        snprintf(&buf3[count * 2], 3, "%2s",
+-                                 &ascii_to_zenkaku[(buf2[count] - ' ') * 2]);
+-                    }
+-                    else
+-                    {
+-                        snprintf(&buf3[count * 2], 3, "  ");
+-                    }
+-                }
+-                buf3[66] = '\0';
+-                text += buf3;
+-            }
+-            else
+-            {
+-                text += buf2;
+-            }
+ 
++            snprintf(buf2, 34, "%-33s", buf);
++            text += buf2;
+             text += EOL;
+             s = buf;
+         }
+@@ -353,282 +248,20 @@
+  // dump_stats
+  //
+  //---------------------------------------------------------------
+-static void dump_stats( std::string & text )
++static void dump_stats( std::string & text, bool calc_unid)
+ {
+-    char st_prn[] = "";
+-
+-#ifdef JP
+-    text += player_title();
+-    text += "『";
+-    text += you.your_name;
+-    text += "』";
+-#else
+-    text += you.your_name;
+-    text += " the ";
+-    text += player_title();
+-    text += " (";
+-    text += species_name(you.species, you.experience_level);
+-    text += ")";
+-#endif
++    get_full_detail(text, calc_unid);
+     text += EOL;
+-
+-#ifdef JP
+-    text += "レベル ";
+-    itoa(you.experience_level, st_prn, 10);
+-    text += st_prn;
+-    text += "  ";
+-    text += species_name(you.species, you.experience_level);
+-    text += "  ";
+-    text += you.class_name;
+-    text += EOL EOL;
+-#else
+-    text += "(Level ";
+-    itoa(you.experience_level, st_prn, 10);
+-    text += st_prn;
+-    text += " ";
+-    text += you.class_name;
+-    text += ")";
+-    text += EOL EOL;
+-#endif
+-
+-#ifdef JP
+-    text += "ＨＰ ";
+-#else
+-    text += "HP   ";
+-#endif
+-    snprintf(st_prn, 10, "%3d", you.hp);
+-    text += st_prn;
+-
+-    int max_max_hp = you.hp_max + player_rotted();
+-
+-    text += "/";
+-    snprintf(st_prn, 10, "%3d", you.hp_max);
+-    text += st_prn;
+-
+-    if (max_max_hp != you.hp_max)
+-    {
+-        text += "(";
+-        snprintf(st_prn, 10, "%3d", max_max_hp);
+-        text += st_prn;
+-        text += ")";
+-#ifdef JP
+-#else
+-        if (you.hp < 1)
+-        {
+-            text += " ";
+-            text += ((!you.deaths_door) ? "(dead)" : "(almost dead)");
+-        }
+-#endif
+-    }
+     text += EOL;
+ 
+ #ifdef JP
+-    text += "ＭＰ ";
+-#else
+-    text += "MP   ";
+-#endif
+-    snprintf(st_prn, 10, "%3d", you.magic_points);
+-    text += st_prn;
+-    text += "/";
+-    snprintf(st_prn, 10, "%3d", you.max_magic_points);
+-    text += st_prn;
+-    text += EOL;
+-
+-#ifdef JP
+-    text += "腕力 ";
+-#else
+-    text += "Str  ";
+-#endif
+-    snprintf(st_prn, 10, "%2d", you.strength);
+-    text += st_prn;
+-    if (you.strength < you.max_strength)
+-    {
+-        text += "/";
+-        snprintf(st_prn, 10, "%2d", you.max_strength);
+-        text += st_prn;
+-    }
+-    else
+-    {
+-    text += "   ";
+-    }
+-
+-#ifdef JP
+-    text += "  器用 ";
+-#else
+-    text += "  Dex  ";
+-#endif
+-    snprintf(st_prn, 10, "%2d", you.dex);
+-    text += st_prn;
+-    if (you.dex < you.max_dex)
+-    {
+-        text += "/";
+-        snprintf(st_prn, 10, "%2d", you.max_dex);
+-        text += st_prn;
+-    }
+-    else
+-    {
+-    text += "   ";
+-    }
+-
+-#ifdef JP
+-    text += "  知力 ";
+-#else
+-    text += "  Int  ";
+-#endif
+-    snprintf(st_prn, 10, "%2d", you.intel);
+-    text += st_prn;
+-    if (you.intel < you.max_intel)
+-    {
+-        text += "/";
+-        snprintf(st_prn, 10, "%2d", you.max_intel);
+-        text += st_prn;
+-    }
+-    else
+-    {
+-    //text += "   ";
+-    }
+-    text += EOL;
+-
+-#ifdef JP
+-    text += "ＡＣ ";
+-#else
+-    text += "AC   ";
+-#endif
+-    snprintf(st_prn, 10, "%2d", player_AC() );
+-    text += st_prn;
+-
+-#ifdef JP
+-    text += "     回避 ";
+-#else
+-    text += "     EV   ";
+-#endif
+-    snprintf(st_prn, 10, "%2d", player_evasion() );
+-    text += st_prn;
+-
+-#ifdef JP
+-    text += "     盾   ";
+-#else
+-    text += "     SH   ";
+-#endif
+-    snprintf(st_prn, 10, "%2d", player_shield_class() );
+-    text += st_prn;
+-    text += EOL EOL;
+-#ifdef JP
+-    text += "経験値 ";
+-    itoa(you.experience_level, st_prn, 10);
+-    text += st_prn;
+-    text += "/";
+-    itoa(you.experience, st_prn, 10);
+-    text += st_prn;
+-    text += EOL;
+-    text += "所持金 ";
+-    itoa( you.gold, st_prn, 10 );
+-    text += st_prn;
+-#else
+-    text += "Gold : ";
+-    itoa( you.gold, st_prn, 10 );
+-    text += st_prn;
+-    text += EOL;
+-
+-    text += "Experience : ";
+-    itoa(you.experience_level, st_prn, 10);
+-    text += st_prn;
+-    text += "/";
+-    itoa(you.experience, st_prn, 10);
+-    text += st_prn;
+-#endif
+-    text += EOL;
+-
+-    if (you.real_time != -1)
+-    {
+-        const time_t curr = you.real_time + (time(NULL) - you.start_time);
+-        char buff[200];
+-
+-        make_time_string( curr, buff, sizeof(buff) );
+-
+-#ifdef JP
+-        text += "プレイ時間 ";
+-#else
+-        text += "Play time: ";
+-#endif
+-        text += buff;
+-
+-#ifdef JP
+-        text += "(経過ターン数";
+-        itoa( you.num_turns, st_prn, 10 );
+-        text += st_prn;
+-        text += ")";
+-#else
+-        text += "(Number of turns: ";
+-        itoa( you.num_turns, st_prn, 10 );
+-        text += st_prn;
+-        text += ")";
+-#endif
+-        text += EOL EOL;
+-    }
+-
+-#ifdef JP
+-        if (you.hp < 1)
+-        {
+-            text += ((!you.deaths_door) ? "あなたは死んでいる。" : "あなたは死のとば口に臨んでいる。");
+-            text += EOL;
+-        }
+-#endif
+-}                               // end dump_stats()
+-
+- //---------------------------------------------------------------
+- //
+- // dump_stats2
+- //
+- //---------------------------------------------------------------
+-static void dump_stats2( std::string & text, bool calc_unid)
+-{
+-    char buffer[25*3][45];
+-    char str_pass[80];
+-    char* ptr_n;
+-    int i;
+-    int dump_x = 1;
+-    int dump_y = 1;
+-
+-    get_full_detail(&buffer[0][0], calc_unid);
+-
+-    for(i=0; i<25; i++)
+-    {
+-        //if (buffer[i][0] != '\0')
+-        ptr_n = &buffer[i+0][0];
+-        if (buffer[i+25][0] == '\0' && buffer[i+50][0] == '\0')
+-            snprintf(&str_pass[0], 45, "%s", ptr_n);
+-        else
+-            snprintf(&str_pass[0], 45, "%-28s", ptr_n);
+-        text += str_pass;
+-
+-        ptr_n = &buffer[i+25][0];
+-        if (buffer[i+50][0] == '\0')
+-            snprintf(&str_pass[0], 45, "%s", ptr_n);
+-        else
+-            snprintf(&str_pass[0], 45, "%-20s", ptr_n);
+-        text += str_pass;
+-
+-        ptr_n = &buffer[i+50][0];
+-        if (buffer[i+50][0] != '\0')
+-        {
+-            snprintf(&str_pass[0], 45, "%s", ptr_n);
+-            text += str_pass;
+-        }
+-        //text += &buffer[i+25][0];
+-        //text += &buffer[i+48][0];
+-        text += EOL;
+-    }
+-
+-    text += EOL EOL;
+-#ifdef JP
+-    if (you.hp < 1)
+-    {
++    if (you.hp < 1) {
+         text += ((!you.deaths_door) ? "あなたは死んでいる。" : "あなたは死のとば口に臨んでいる。");
+         text += EOL;
+     }
+ #endif
+ }
++
+  //---------------------------------------------------------------
+  //
+  // dump_location
+@@ -1019,20 +652,11 @@
+                         if (is_dumpable_artifact( you.inv[j],
+                                                   Options.verbose_dump ))
+                         {
+-                            text2 = get_item_description( you.inv[j],
++							text2.clear();
++                            text2 += get_item_description( you.inv[j],
+                                                           Options.verbose_dump,
+                                                           true );
+-#ifdef JP
+-                        std::string text3;
+-                        text3 += munge_description(text2);
+-                        for (int i = text3.length() - 2; i >= 0; --i)
+-                            if (text3[i] == '\n')
+-                                text3.insert(i + 1, "  ");
+-                            text += text3;
+-#else
+-                            text += munge_description(text2);
+-#endif
+-
++							text += munge_description(text2);
+                         }
+                         else
+                         {
+@@ -1185,7 +809,6 @@
+ 
+ #ifdef JP
+         text += "呪文                              系統                    成功率     LV" EOL;
+-
+ #else
+         text += "  Your Spells                       Type                  Success   Level" EOL;
+ 
+@@ -1197,20 +820,11 @@
+ 
+             if (spell != SPELL_NO_SPELL)
+             {
+-                std::string spell_line = " ";
+-
+-                char strng[2];
+-                strng[0] = letter;
+-                strng[1] = '\0';
+-
+-                spell_line += strng;
+-                spell_line += " - ";
+-                spell_line += spell_title( spell );
++				std::string str;
++                std::ostringstream ostr;
+ 
+-                for (int i = spell_line.length(); i < 34; i++)
+-                {
+-                    spell_line += ' ';
+-                }
++				ostr << " " << letter << " - " << spell_title( spell );
++				utf8_indent(spell_title( spell ), 29, ostr);
+ 
+                 bool already = false;
+ 
+@@ -1218,55 +832,57 @@
+                 {
+                     if (spell_typematch( spell, spell_type_index[i] ))
+                     {
+-                        spell_line +=
+-                                spell_type_name(spell_type_index[i], already);
++						str += spell_type_name(spell_type_index[i], already);
+                         already = true;
+                     }
+                 }
+ 
+-                for (int i = spell_line.length(); i < 58; i++)
+-                {
+-                    spell_line += ' ';
+-                }
++				if (already) {
++					ostr << str;
++					utf8_indent(str.c_str(), 24, ostr);
++				}
++				else
++					ostr << "                        ";
+ 
+                 int fail_rate = spell_fail( spell );
+ 
++				str.clear();
+ #ifdef JP
+-                spell_line += (fail_rate == 100) ? "不可能"    :
+-                              (fail_rate >   90) ? "極めて悪い":
+-                              (fail_rate >   80) ? "かなり悪い":
+-                              (fail_rate >   70) ? "悪い"      :
+-                              (fail_rate >   60) ? "劣る"      :
+-                              (fail_rate >   50) ? "やや劣る"  :
+-                              (fail_rate >   40) ? "やや良い"  :
+-                              (fail_rate >   30) ? "良い"      :
+-                              (fail_rate >   20) ? "とても良い":
+-                              (fail_rate >   10) ? "素晴らしい":
+-                              (fail_rate >   0)  ? "卓越"
+-                                                 : "完璧" ;
+-#else
+-                spell_line += (fail_rate == 100) ? "Useless"   :
+-                              (fail_rate >   90) ? "Terrible"  :
+-                              (fail_rate >   80) ? "Cruddy"    :
+-                              (fail_rate >   70) ? "Bad"       :
+-                              (fail_rate >   60) ? "Very Poor" :
+-                              (fail_rate >   50) ? "Poor"      :
+-                              (fail_rate >   40) ? "Fair"      :
+-                              (fail_rate >   30) ? "Good"      :
+-                              (fail_rate >   20) ? "Very Good" :
+-                              (fail_rate >   10) ? "Great"     :
+-                              (fail_rate >   0)  ? "Excellent"
+-                                                 : "Perfect";
++                str += (fail_rate == 100) ? "不可能"    :
++                        (fail_rate >   90) ? "極めて悪い":
++                        (fail_rate >   80) ? "かなり悪い":
++                        (fail_rate >   70) ? "悪い"      :
++                        (fail_rate >   60) ? "劣る"      :
++                        (fail_rate >   50) ? "やや劣る"  :
++                        (fail_rate >   40) ? "やや良い"  :
++                        (fail_rate >   30) ? "良い"      :
++                        (fail_rate >   20) ? "とても良い":
++                        (fail_rate >   10) ? "素晴らしい":
++                        (fail_rate >   0)  ? "卓越"
++                                           : "完璧" ;
++#else
++                str += (fail_rate == 100) ? "Useless"   :
++                        (fail_rate >   90) ? "Terrible"  :
++                        (fail_rate >   80) ? "Cruddy"    :
++                        (fail_rate >   70) ? "Bad"       :
++                        (fail_rate >   60) ? "Very Poor" :
++                        (fail_rate >   50) ? "Poor"      :
++                        (fail_rate >   40) ? "Fair"      :
++                        (fail_rate >   30) ? "Good"      :
++                        (fail_rate >   20) ? "Very Good" :
++                        (fail_rate >   10) ? "Great"     :
++                        (fail_rate >   0)  ? "Excellent"
++                                           : "Perfect";
+ #endif
+ 
+-                for (int i = spell_line.length(); i < 70; i++)
+-                    spell_line += ' ';
++				ostr << str;
++				utf8_indent(str.c_str(), 12, ostr);
+ 
+                 itoa((int) spell_difficulty( spell ), tmp_quant, 10 );
+-                spell_line += tmp_quant;
+-                spell_line += EOL;
++                ostr << tmp_quant;
++                ostr << EOL;
+ 
+-                text += spell_line;
++                text += ostr.str();
+             }
+         }
+     }
+@@ -1344,23 +960,12 @@
+ // character was successfully saved.
+ //
+ //---------------------------------------------------------------
+-string dump_char2( const char fname[30], bool show_prices );
+-bool dump_char( const char fname[30], bool show_prices )
+-{
+-	if(dump_char2(fname, show_prices).length())
+-		return true;
+-	return false;
+-}
+-
+-std::string dump_char2( const char fname[30], bool show_prices )  // $$$ a try block?
++bool dump_char( const char fname[30], bool show_prices )  // $$$ a try block?
+ {
+     bool succeeded = false;
+ 
+     std::string text;
+ 
+-    // start with enough room for 100 80 character lines
+-    text.reserve(200 * 80);
+-
+     text += "Dungeon Crawl " VERSION;
+ #ifdef V_FIX
+     text += "f";
+@@ -1409,12 +1014,10 @@
+     text += EOL;
+     text += EOL;
+ 
+-    //dump_stats(text);
+-
+     if (strcmp(fname,"morgue.txt")==0)
+-        dump_stats2(text, true);
++        dump_stats(text, true);
+     else
+-        dump_stats2(text, false);
++        dump_stats(text, false);
+ 
+     dump_location(text);
+     dump_religion(text);
+@@ -1572,7 +1175,7 @@
+     text += EOL;
+     text += EOL;
+ 
+-    dump_screenshot(text);
++    dump_screenshot(text); //<- this function freeze the game!
+ 
+     text += EOL;
+     text += EOL;
+@@ -1591,8 +1194,8 @@
  
  #ifdef STASH_TRACKING
      char stash_file_name[kPathLen] = "";
@@ -61,7 +799,7 @@
      if (strcmp(fname, "morgue.txt") != 0)
      {
          strncat(file_name, ".txt", kPathLen);
-@@ -1601,12 +1601,15 @@
+@@ -1601,12 +1204,15 @@
      }
      else
      {
@@ -70,7 +808,8 @@
 +            strncpy(stash_file_name, SysEnv.crawl_dir, kPathLen);
 +        strncat(stash_file_name, "morgue.lst", kPathLen);
          stashes.dump(stash_file_name);
-     }//morgue.lst
+-    }//morgue.lst
++    } //morgue.lst
  #endif
  
      FILE *handle = fopen(file_name, "wb");
@@ -78,9 +817,59 @@
  
  #if DEBUG_DIAGNOSTICS
  #ifdef JP
---- source-jp/describe.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/describe.cc	2011-07-22 11:44:15.000000000 +0900
-@@ -21,7 +21,7 @@
+@@ -1620,24 +1226,7 @@
+ 
+     if (handle != NULL)
+     {
+-        size_t begin = 0;
+-        size_t end = text.find(EOL);
+-
+-        while (end != std::string::npos)
+-        {
+-            end += strlen(EOL);
+-
+-            size_t len = end - begin;
+-
+-            if (len > 100)
+-                len = 100;
+-
+-            fwrite(text.c_str() + begin, len, 1, handle);
+-
+-            begin = end;
+-            end = text.find(EOL, end);
+-        }
+-
++		fwrite(text.c_str(), text.length(), 1, handle);
+         fclose(handle);
+         succeeded = true;
+     }
+@@ -1648,5 +1237,5 @@
+         mpr("Error opening file.");
+ #endif
+ 
+-    return succeeded?text:(string)"";//(succeeded);
++    return succeeded;
+ }                               // end dump_char()
+--- ./source-old/chardump.h	2012-04-15 23:25:38.627422931 +0900
++++ ./source-unicode/chardump.h	2012-04-13 22:05:00.074751812 +0900
+@@ -20,7 +20,6 @@
+  * called from: acr - ouch
+  * *********************************************************************** */
+ bool dump_char( const char fname[30], bool show_prices );
+-std::string dump_char2( const char fname[30], bool show_prices );
+ std::string munge_description(const std::string &inStr);
+ 
+ #endif
+--- ./source-old/describe.cc	2012-04-15 23:25:38.900755174 +0900
++++ ./source-unicode/describe.cc	2012-04-14 14:26:39.663238720 +0900
+@@ -1,5 +1,4 @@
+-/*
+- *  File:       describe.cc
++ /*
+  *  Summary:    Functions used to print information about various game objects.
+  *  Written by: Linley Henzell
+  *
+@@ -21,7 +20,7 @@
  
  #include <stdlib.h>
  #include <stdio.h>
@@ -89,8 +878,722 @@
  
  #ifdef DOS
  #include <conio.h>
---- source-jp/direct.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/direct.cc	2011-07-22 11:44:15.000000000 +0900
+@@ -42,6 +41,7 @@
+ #include "stuff.h"
+ #include "wpn-misc.h"
+ #include "spl-util.h"
++#include "chardump.h"
+ 
+ 
+ // ========================================================================
+@@ -77,96 +77,34 @@
+ // word and such. The character $ is interpreted as a CR.
+ //
+ //---------------------------------------------------------------
+-static void print_description( const std::string &d )
++static void print_description( const std::string &inStr )
+ {
+-    unsigned int  nextLine = std::string::npos;
+-    unsigned int  currentPos = 0;
++    char ch;
++    long i = 0;
++    std::string outStr;
+ 
+-#ifdef DOS
+-    const unsigned int lineWidth = 52;
+-#else
+-    const unsigned int lineWidth = 70;
+-#endif
+-
+-    bool nlSearch = true;       // efficiency
+-
+-    textcolor(LIGHTGREY);
+-
+-    while(currentPos < d.length())
++    while (i < (long) inStr.length())
+     {
+-        if (currentPos != 0)
+-        {
+-#ifdef PLAIN_TERM
+-            gotoxy(1, wherey() + 1);
+-#endif
+-#ifdef DOS_TERM
+-            cprintf(EOL);
+-#endif
+-        }
++        ch = inStr[i];
+ 
+-        // see if $ sign is within one lineWidth
+-        if (nlSearch)
++        if (ch == '$')
+         {
+-            nextLine = d.find('$', currentPos);
+-
+-            if (nextLine >= currentPos && nextLine < currentPos + lineWidth)
++            if ( (i + 1) != (long)inStr.length() )
+             {
+-                cprintf((d.substr(currentPos, nextLine - currentPos)).c_str());
+-                currentPos = nextLine + 1;
+-                continue;
++                outStr += EOL;
+             }
+-
+-            if (nextLine == std::string::npos)
+-                nlSearch = false;       // there are no newlines, don't search again.
++			i++;
+         }
+-
+-        // no newline -- see if rest of string will fit.
+-        if (currentPos + lineWidth >= d.length())
+-        {
+-            cprintf((d.substr(currentPos)).c_str());
+-            return;
+-        }
+-
+-#ifdef JP
+-        // 行端での折り返し処理
+-        nextLine = currentPos + lineWidth;
+-        unsigned int mbb = currentPos;
+-        while (mbb < nextLine) //行端のマルチバイト第1文字を処理
+-        {
+-            if ( (unsigned char)d[mbb] >= 0x80 ) //multibyte1
+-            {
+-                if (mbb == (nextLine - 1) )
+-                    nextLine--;
+-                mbb += 2;
+-            }
+-            else
+-                mbb ++;
+-        }
+-        if (nextLine != std::string::npos && nextLine > currentPos)
+-        {
+-            cprintf((d.substr(currentPos, nextLine - currentPos)).c_str());
+-            currentPos = nextLine;
+-            continue;
+-        }
+-#else
+-        // ok.. try to truncate at space.
+-        nextLine = d.rfind(' ', currentPos + lineWidth);
+-        if (nextLine != std::string::npos && nextLine > currentPos)
++        else
+         {
+-            cprintf((d.substr(currentPos, nextLine - currentPos)).c_str());
+-            currentPos = nextLine + 1;
+-            continue;
++            outStr += ch;
++            i++;
+         }
+-#endif
+-        // oops.  just truncate.
+-        nextLine = currentPos + lineWidth;
++    }
+ 
+-        if (nextLine > d.length())
+-            nextLine = d.length();
++    outStr += EOL;
+ 
+-        cprintf((d.substr(currentPos, nextLine - currentPos)).c_str());
+-        currentPos = nextLine;
+-    }
++    cprintf(outStr.c_str());
+ }
+ 
+ 
+@@ -180,8 +118,6 @@
+ //---------------------------------------------------------------
+ static void randart_descpr( std::string &description, const item_def &item )
+ {
+-    unsigned int old_length = description.length();
+-
+     FixedVector< char, RA_PROPERTIES > proprt;
+     randart_wpn_properties( item, proprt );
+ 
+@@ -545,16 +481,12 @@
+         description += "$It emits mutagenic radiations.";
+ #endif
+ 
+-    if (old_length != description.length())
+-        description += "$";
+-
+     if (is_unrandom_artefact( item ))
+     {
+         const char *desc = unrandart_descrip( 0, item );
+         if (strlen( desc ) > 0)
+         {
+             description += desc;
+-            description += "$";
+         }
+     }
+ }
+@@ -1125,9 +1057,7 @@
+         break;
+     }
+ 
+-#ifdef JP
+-    //description += ".";
+-#else
++#ifndef JP
+     description += ".";
+ #endif
+ 
+@@ -1311,10 +1241,6 @@
+ {
+     std::string description;
+ 
+-    description.reserve(200);
+-
+-    description = "";
+-
+     if (is_fixed_artefact( item ))
+     {
+         if (item_ident( item, ISFLAG_KNOW_PROPERTIES ))
+@@ -1464,24 +1390,23 @@
+ #endif
+                 break;
+             }
+-
+-            description += "$";
+         }
+         else if (item_ident( item, ISFLAG_KNOW_TYPE ))
+         {
+             // We know it's an artefact type weapon, but not what it does.
+ #ifdef JP
+-            description += "$この武器には幾つかの隠された特性があるかもしれない。$";
++            description += "$この武器には幾つかの隠された特性があるかもしれない。";
+ #else
+-            description += "$This weapon may have some hidden properties.$";
++            description += "$This weapon may have some hidden properties.";
+ #endif
+         }
++    	description += "$";
+     }
+     else if (is_unrandom_artefact( item )
+         && strlen(unrandart_descrip(1, item)) != 0)
+     {
+         description += unrandart_descrip(1, item);
+-        description += "$";
++    	description += "$";
+     }
+     else
+     {
+@@ -1892,9 +1817,8 @@
+                 DEBUGSTR("Unknown weapon");
+ #endif
+             }
+-
+-            description += "$";
+         }
++    	description += "$";
+     }
+ 
+     if (verbose == 1 && !launches_things( item.sub_type ))
+@@ -1920,8 +1844,8 @@
+ #endif
+         append_value(description, property( item, PWPN_SPEED ) * 10, false);
+         description += "%%";
++    	description += "$";
+     }
+-    description += "$";
+ 
+     if (!is_fixed_artefact( item ))
+     {
+@@ -1933,6 +1857,7 @@
+         // special weapon descrip
+         if (spec_ench != SPWPN_NORMAL && item_ident( item, ISFLAG_KNOW_TYPE ))
+         {
++			unsigned int old_length = description.length();
+             description += "$";
+ 
+             switch (spec_ench)
+@@ -2108,17 +2033,18 @@
+ #endif
+                 break;
+             }
++			if (old_length != description.length())
++            	description += "$";
+         }
+ 
+         if (is_random_artefact( item ))
+         {
+             if (item_ident( item, ISFLAG_KNOW_PROPERTIES ))
+             {
+-                unsigned int old_length = description.length();
++				unsigned int old_length = description.length();
+                 randart_descpr( description, item );
+-
+-                if (description.length() == old_length)
+-                    description += "$";
++				if (old_length != description.length())
++					description += "$";
+             }
+             else if (item_ident( item, ISFLAG_KNOW_TYPE ))
+             {
+@@ -2131,7 +2057,7 @@
+         }
+         else if (spec_ench != SPWPN_NORMAL && item_ident( item, ISFLAG_KNOW_TYPE ))
+         {
+-            description += "$";
++            //description += "$";
+         }
+     }
+ 
+@@ -2349,6 +2275,8 @@
+         }
+     }
+ 
++	description += "$";
++
+     return (description);
+ }
+ 
+@@ -2362,8 +2290,6 @@
+ {
+     std::string description;
+ 
+-    description.reserve(64);
+-
+     switch (item.sub_type)
+     {
+     case MI_STONE:
+@@ -2474,14 +2400,12 @@
+ {
+     std::string description;
+ 
+-    description.reserve(200);
+-
+     if (is_unrandom_artefact( item )
+         && strlen(unrandart_descrip(1, item)) != 0)
+     {
+         description += "$";
+         description += unrandart_descrip(1, item);
+-        description += "$$";
++        description += "$";
+     }
+     else
+     {
+@@ -2841,7 +2765,7 @@
+                 description += "ぬるぬる";
+                 if (you.species != SP_MUMMY)
+                     description += "していて嫌な臭いの";
+-                description += "する沼ドラゴンの皮だ。 "
++                description += "する沼ドラゴンの皮だ。 $"
+                                "着ようと思えば着られないこともない。 ";
+ #else
+                 description += "The slimy";
+@@ -3061,7 +2985,6 @@
+ #endif
+             break;
+         }
+-        description += "$";
+     }
+ 
+     if (is_random_artefact( item ))
+@@ -3089,7 +3012,7 @@
+ 
+             if (item.sub_type == ARM_CLOAK || item.sub_type == ARM_BOOTS)
+ #ifdef JP
+-                description += "そして着用者の隠密行動の助けになる。 ";
++                description += "$そして着用者の隠密行動の助けになる。 ";
+ #else
+                 description += ", and helps its wearer avoid being noticed";
+ #endif
+@@ -3138,6 +3061,8 @@
+ #else
+ #endif
+ 
++    description += "$";
++
+     return description;
+ }
+ 
+@@ -3150,8 +3075,6 @@
+ {
+     std::string description;
+ 
+-    description.reserve(64);
+-
+     if (get_ident_type( OBJ_WANDS, item.sub_type ) != ID_KNOWN_TYPE)
+ #ifdef JP
+         description += "これは杖だ。魔法の力を秘めているかもしれない。 $";
+@@ -3354,6 +3277,8 @@
+ #endif
+     }
+ 
++	description += "$";
++
+     return description;
+ }
+ 
+@@ -3367,8 +3292,6 @@
+ {
+     std::string description;
+ 
+-    description.reserve(100);
+-
+     switch (item.sub_type)
+     {
+     // rations
+@@ -4070,7 +3993,7 @@
+             break;
+         case POT_CONFUSION:
+ #ifdef JP
+-            description += "あなたの認知能力を混乱させ、 "
++            description += "あなたの認知能力を混乱させ、 $"
+                            "あなた自身の行動をまともに制御できなくしてしまう。 ";
+ #else
+             description += "confuses your perceptions and reduces "
+@@ -4093,7 +4016,7 @@
+             break;
+         case POT_DEGENERATION:
+ #ifdef JP
+-            description += "あなたの肉体と頭脳と反射神経に "
++            description += "あなたの肉体と頭脳と反射神経に $"
+                            "恐ろしい障害をもたらす。 ";
+ #else
+             description += "can do terrible things to your "
+@@ -4165,7 +4088,7 @@
+         case POT_HEALING:
+         case POT_HEAL_WOUNDS:
+ #ifdef JP
+-            description += "もしもこの薬を体調が万全か、ほぼ万全の状態で飲めば、 "
++            description += "もしもこの薬を体調が万全か、ほぼ万全の状態で飲めば、 $"
+                            "永続的な負傷を";
+ #else
+             description += "If one uses it when they are "
+@@ -4517,7 +4440,7 @@
+         {
+         case RING_REGENERATION:
+ #ifdef JP
+-            description += "この驚くべき指輪は装着者の回復能力を増強するが、 "
++            description += "この驚くべき指輪は装着者の回復能力を増強するが、 $"
+                            "同様に代謝エネルギーの消費速度も加速する。 ";
+ #else
+             description += "This wonderful ring greatly increases the "
+@@ -4529,7 +4452,7 @@
+         case RING_PROTECTION:
+             description +=
+ #ifdef JP
+-                "この指輪は装着者を負傷から保護するか、あるいは負傷を受けやすくする。 "
++                "この指輪は装着者を負傷から保護するか、あるいは負傷を受けやすくする。 $"
+                 "効果がどちらであるかは指輪の数値に依存している。 ";
+ #else
+                 "This ring either protects its wearer from harm or makes "
+@@ -4567,7 +4490,7 @@
+         case RING_STRENGTH:
+             description +=
+ #ifdef JP
+-                "この指輪は装着者の腕力を増加させるか、あるいは減退させる。 "
++                "この指輪は装着者の腕力を増加させるか、あるいは減退させる。 $"
+                 "効果がどちらであるかは指輪の数値に依存している。 ";
+ #else
+                 "This ring increases or decreases the physical strength "
+@@ -4588,7 +4511,7 @@
+         case RING_SEE_INVISIBLE:
+             description +=
+ #ifdef JP
+-                "この指輪は装着者に、魔法によって視界から隠れているものを "
++                "この指輪は装着者に、魔法によって視界から隠れているものを $"
+                 "視ることを可能にする。 ";
+ #else
+                 "This ring allows its wearer to see those things hidden "
+@@ -4599,7 +4522,7 @@
+         case RING_INVISIBILITY:
+             description +=
+ #ifdef JP
+-                "この指輪は発動することで装着者を一時的に透明にするが、 "
++                "この指輪は発動することで装着者を一時的に透明にするが、 $"
+                 "透明化の最中には代謝エネルギーの消費が大幅に増加する。 ";
+ #else
+                 "This powerful ring can be activated to hide its wearer "
+@@ -4621,7 +4544,7 @@
+         case RING_TELEPORTATION:
+             description +=
+ #ifdef JP
+-                "この指輪は時折、装着者を無作為な場所に転位させる力を及ぼす。 "
++                "この指輪は時折、装着者を無作為な場所に転位させる力を及ぼす。 $"
+                 "また、発動することで同様の転位を意図的に引き起こすことができる。 ";
+ #else
+                 "This ring occasionally exerts its power to randomly "
+@@ -4633,7 +4556,7 @@
+         case RING_EVASION:
+             description +=
+ #ifdef JP
+-                "この指輪は装着者の回避能力を上昇させるか、あるいは低下させる。 "
++                "この指輪は装着者の回避能力を上昇させるか、あるいは低下させる。 $"
+                 "効果がどちらであるかは指輪の数値に依存している。 ";
+ #else
+                 "This ring makes its wearer either more or less capable "
+@@ -4655,7 +4578,7 @@
+         case RING_SUSTENANCE:
+             description +=
+ #ifdef JP
+-                "この指輪は装着者にエネルギーを供給するため、 "
++                "この指輪は装着者にエネルギーを供給するため、 $"
+                 "装着者は食事を必要とする頻度が少なくなる。 ";
+ #else
+                 "This ring provides energy to its wearer, so that they "
+@@ -4666,7 +4589,7 @@
+         case RING_DEXTERITY:
+             description +=
+ #ifdef JP
+-                "この指輪は装着者の器用さを増加させるか、あるいは減退させる。 "
++                "この指輪は装着者の器用さを増加させるか、あるいは減退させる。 $"
+                 "効果がどちらであるかは指輪の数値に依存している。 ";
+ #else
+                 "This ring increases or decreases the dexterity of its "
+@@ -4678,7 +4601,7 @@
+         case RING_INTELLIGENCE:
+             description +=
+ #ifdef JP
+-                "この指輪は装着者の知力を増加させるか、あるいは減退させる。 "
++                "この指輪は装着者の知力を増加させるか、あるいは減退させる。 $"
+                 "効果がどちらであるかは指輪の数値に依存している。 ";
+ #else
+                 "This ring increases or decreases the mental ability of "
+@@ -4719,7 +4642,7 @@
+         case RING_LIFE_PROTECTION:
+             description +=
+ #ifdef JP
+-                "この祝福された指輪は負のエネルギーから装着者を保護し、 "
++                "この祝福された指輪は負のエネルギーから装着者を保護し、 $"
+                 "アンデッドと死霊術による生命力の衰弱に対してある程度の免疫を授ける。 ";
+ #else
+                 "This blessed ring protects the life-force of its wearer "
+@@ -4741,9 +4664,9 @@
+         case RING_FIRE:
+             description +=
+ #ifdef JP
+-                "この指輪は火の力との更なる接触を装着者にもたらす。 "
+-                "装着者は熱に対する耐性を得ると共に、 "
+-                "火の魔法をより効果的に扱うことが可能になる。 "
++                "この指輪は火の力との更なる接触を装着者にもたらす。 $"
++                "装着者は熱に対する耐性を得ると共に、 $"
++                "火の魔法をより効果的に扱うことが可能になる。 $"
+                 "ただし冷気の影響によって傷つきやすくなってしまう。 ";
+ #else
+                 "This ring brings its wearer more in contact with "
+@@ -4756,9 +4679,9 @@
+         case RING_ICE:
+             description +=
+ #ifdef JP
+-                "この指輪は冷気と氷の力との更なる接触を装着者にもたらす。 "
+-                "装着者は冷気に対する耐性を得ると共に、 "
+-                "冷気の魔法をより効果的に扱うことが可能になる。 "
++                "この指輪は冷気と氷の力との更なる接触を装着者にもたらす。 $"
++                "装着者は冷気に対する耐性を得ると共に、 $"
++                "冷気の魔法をより効果的に扱うことが可能になる。 $"
+                 "ただし火の影響によって傷つきやすくなってしまう。 ";
+ #else
+                 "This ring brings its wearer more in contact with "
+@@ -4770,10 +4693,10 @@
+ 
+         case RING_TELEPORT_CONTROL:
+ #ifdef JP
+-            description += "この指輪は装着者がどのようなテレポートについてでも目的地を "
+-                           "制御することを可能にする。ただし完全な正確さは望めない。 "
+-                           "固体物の中にテレポートを試みた場合には通常のランダムテレポートとなる。 "
+-                           "また、制御されたテレポートは残留した魔法のエネルギーによって "
++            description += "この指輪は装着者がどのようなテレポートについてでも目的地を $"
++                           "制御することを可能にする。ただし完全な正確さは望めない。 $"
++                           "固体物の中にテレポートを試みた場合には通常のランダムテレポートとなる。 $"
++                           "また、制御されたテレポートは残留した魔法のエネルギーによって $"
+                            "使用者に悪影響を与えることに用心するべきである。 ";
+ #else
+             description += "This ring allows its wearer to control the "
+@@ -4789,9 +4712,9 @@
+         case AMU_RAGE:
+             description +=
+ #ifdef JP
+-                "この護符は装着者がバーサークの激昂状態になることを可能とし、 "
+-                "またバーサークへの移行を成功させるチャンスを増加させる。 "
+-                "さらに装着者がバーサークから醒めた際に気絶してしまう確率を減らす。 ";
++                "この護符は装着者がバーサークの激昂状態になることを可能とし、 $"
++                "またバーサークへの移行を成功させるチャンスを増加させる。 $"
++                "さらに装着者がバーサークから醒めた際に気絶してしまう確率を減らす。 $";
+ #else
+                 "This amulet enables its wearer to attempt to enter "
+                 "a state of berserk rage, and increases their chance "
+@@ -4803,7 +4726,7 @@
+         case AMU_RESIST_SLOW:
+             description +=
+ #ifdef JP
+-                "この護符は装着者を魔術的に引き起こされる減速から保護する。 "
++                "この護符は装着者を魔術的に引き起こされる減速から保護する。 $"
+                 "また装着者を加速する魔術の持続時間を増加させる。 ";
+ #else
+                 "This amulet protects its wearer from some magically "
+@@ -4835,7 +4758,7 @@
+         case AMU_RESIST_CORROSION:
+             description +=
+ #ifdef JP
+-                "この護符は装着者の防具と武器を酸による腐蝕から保護する。 "
++                "この護符は装着者の防具と武器を酸による腐蝕から保護する。 $"
+                 "ただし保護は絶対確実というわけではない。 ";
+ #else
+                 "This amulet protects the armour and weaponry of its "
+@@ -4847,7 +4770,7 @@
+         case AMU_THE_GOURMAND:
+             description +=
+ #ifdef JP
+-                "この護符は着用者が腐敗した肉を問題なく食べることを可能とする。 "
++                "この護符は着用者が腐敗した肉を問題なく食べることを可能とする。 $"
+                 "ただし有毒あるいは呪われた肉はとりもなおさず危険である。 ";
+ #else
+                 "This amulet allows its wearer to consume meat in "
+@@ -4860,7 +4783,7 @@
+         case AMU_CONSERVATION:
+             description +=
+ #ifdef JP
+-                "この護符は着用者の所持品を破壊から保護する。 "
++                "この護符は着用者の所持品を破壊から保護する。 $"
+                 "ただし保護は絶対確実というわけではない。 ";
+ #else
+                 "This amulet protects some of the possessions of "
+@@ -4872,9 +4795,9 @@
+         case AMU_CONTROLLED_FLIGHT:
+             description +=
+ #ifdef JP
+-                "この護符の着用者は魔術的な力で宙に浮いている時に "
+-                "飛行運動をある程度制御することができる。 "
+-                "これは例えば、着用者が空中浮揚を停止することなしに "
++                "この護符の着用者は魔術的な力で宙に浮いている時に $"
++                "飛行運動をある程度制御することができる。 $"
++                "これは例えば、着用者が空中浮揚を停止することなしに $"
+                 "階段を降りたり床にあるアイテムを拾ったりすることを可能にする。 ";
+ #else
+                 "Should the wearer of this amulet be levitated "
+@@ -4898,7 +4821,7 @@
+         case AMU_RESIST_MUTATION:
+             description +=
+ #ifdef JP
+-                "この護符は着用者を突然変異から保護する。 "
++                "この護符は着用者を突然変異から保護する。 $"
+                 "ただし保護は絶対確実というわけではない。 ";
+ #else
+                 "This amulet protects its wearer from mutations, "
+@@ -4913,8 +4836,6 @@
+             DEBUGSTR("Unknown jewellery");
+ #endif
+         }
+-
+-        description += "$";
+     }
+ 
+     if ((verbose == 1 || is_random_artefact( item ))
+@@ -5046,13 +4967,13 @@
+         {
+             if (item.sub_type >= AMU_RAGE)
+ #ifdef JP
+-                description += "$この護符には幾つかの隠された特性があるかもしれない。$";
++                description += "$この護符には幾つかの隠された特性があるかもしれない。 $";
+ #else
+                 description += "$This amulet may have hidden properties.$";
+ #endif
+             else
+ #ifdef JP
+-                description += "$この指輪には幾つかの隠された特性があるかもしれない。$";
++                description += "$この指輪には幾つかの隠された特性があるかもしれない。 $";
+ #else
+                 description += "$This ring may have hidden properties.$";
+ #endif
+@@ -5068,6 +4989,8 @@
+ #endif
+     }
+ 
++    description += "$";
++
+     return (description);
+ }                               // end describe_jewellery()
+ 
+@@ -5329,6 +5252,8 @@
+ #endif
+     }
+ 
++    description += "$";
++
+     return (description);
+ }
+ 
+@@ -5723,7 +5648,7 @@
+ std::string get_item_description( const item_def &item, char verbose, bool dump )
+ {
+     std::string description;
+-    description.reserve(500);
++    //description.reserve(500);
+ 
+     if (!dump)
+     {
+@@ -5825,6 +5750,7 @@
+ #endif
+             break;
+         }
++        description += "$";
+         break;
+ 
+     case OBJ_ORBS:
+@@ -5836,6 +5762,7 @@
+         description += "Once you have escaped to the surface with "
+             "this invaluable artefact, your quest is complete. ";
+ #endif
++        description += "$";
+         break;
+ 
+     case OBJ_MISCELLANY:
+@@ -5851,6 +5778,7 @@
+             ((item.sub_type == CORPSE_BODY) ? "A corpse. "
+                                         : "A decaying skeleton. ");
+ #endif
++        description += "$";
+         break;
+ 
+     default:
+@@ -5861,10 +5789,12 @@
+         DEBUGSTR("Bad item class");
+         description += "This item should not exist. Mayday! Mayday! ";
+ #endif
++        description += "$";
+     }
+ 
+     if (verbose == 1)
+     {
++
+ #ifdef JP
+         description += "$重量 ";
+ #else
+@@ -6894,7 +6824,7 @@
+ #ifdef JP
+         description += "術者が手に持っていた剣を空中で舞わせて、 $"
+                        "敵を攻撃させる。 $"
+-                       "この呪文は魔法の杖と意思を持つアーティファクトには "
++                       "この呪文は魔法の杖と意思を持つアーティファクトには $"
+                        "作用しない。 ";
+ #else
+         description += "causes a weapon held in the caster's hand to dance "
+@@ -11458,11 +11388,13 @@
+ 
+     // Produce a 79 character string with cost right justified:
+     std::string str( abil_info.name );
++	/*
+ #ifdef JP
+     str += std::string( 77 - str.length() - cost.length(), ' ' ) + cost + EOL;
+ #else
+     str += std::string( 79 - str.length() - cost.length(), ' ' ) + cost + EOL;
+ #endif
++	*/
+     cprintf( str.c_str() );
+ }
+ 
+@@ -12079,7 +12011,7 @@
+                 {
+ #ifdef JP
+                     cprintf( "あなたはヴェフメットの名に於いての殺しによって力を得られる。" EOL
+-                             "                        あなたのしもべによる殺しでも同様だ。" EOL );
++                             "あなたのしもべによる殺しでも同様だ。" EOL );
+ #else
+                     cprintf( "You can gain power from the those you kill " EOL
+                              "   in Vehumet's name, or those slain by your servants." EOL );
+--- ./source-old/direct.cc	2012-04-15 23:25:38.994088135 +0900
++++ ./source-unicode/direct.cc	2012-04-08 21:40:25.169347518 +0900
 @@ -1511,7 +1511,7 @@
  
          if (mon_arm != NON_ITEM)
@@ -100,8 +1603,8 @@
  #ifdef JP 
              snprintf( info, INFO_SIZE, "%sは%sを着ている。", 
  #else
---- source-jp/effects.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/effects.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/effects.cc	2012-04-15 23:25:39.154087497 +0900
++++ ./source-unicode/effects.cc	2012-04-08 21:40:25.209347520 +0900
 @@ -13,6 +13,7 @@
  
  #include <string.h>
@@ -110,8 +1613,8 @@
  
  #include "externs.h"
  
---- source-jp/externs.h	2011-07-22 12:04:38.000000000 +0900
-+++ source/externs.h	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/externs.h	2012-04-15 23:25:39.244087138 +0900
++++ ./source-unicode/externs.h	2012-04-08 21:40:25.256014188 +0900
 @@ -26,9 +26,9 @@
  #include "Kills.h"
  #include "message.h"
@@ -125,8 +1628,8 @@
  
  #define MAX_NUM_GODS    21
  
---- source-jp/fight.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/fight.cc	2011-07-22 11:59:01.000000000 +0900
+--- ./source-old/fight.cc	2012-04-15 23:25:39.297420258 +0900
++++ ./source-unicode/fight.cc	2012-04-08 21:40:25.306014190 +0900
 @@ -4052,8 +4052,8 @@
              case MONS_SPINY_WORM:
              case MONS_JELLYFISH:
@@ -191,8 +1694,8 @@
                      poison_monster(defender, false);
                  break;
  
---- source-jp/food.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/food.cc	2011-07-22 12:02:44.000000000 +0900
+--- ./source-old/food.cc	2012-04-15 23:25:39.450752980 +0900
++++ ./source-unicode/food.cc	2012-04-08 21:40:25.346014192 +0900
 @@ -1279,20 +1279,24 @@
              restore_stat(STAT_ALL, false);
              break;
@@ -235,8 +1738,8 @@
                               (temp_rand == 1) ? "Extra thick crust." :
                               (temp_rand == 2) ? "Vegetable." :
                               (temp_rand == 3) ? "Pepperoni." :
---- source-jp/hiscores.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/hiscores.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/hiscores.cc	2012-04-15 23:25:39.497419460 +0900
++++ ./source-unicode/hiscores.cc	2012-04-15 22:53:10.115054307 +0900
 @@ -29,6 +29,7 @@
  #include <stdlib.h>
  #include <stdio.h>
@@ -245,6 +1748,15 @@
  
  #include "AppHdr.h"
  #include "externs.h"
+@@ -220,7 +221,7 @@
+         {
+             hiscores_format_single( info, hs_list[i] );
+             // truncate if we want short format
+-            info[75] = '\0';
++            //info[75] = '\0';
+         }
+         else
+         {
 @@ -1842,6 +1843,9 @@
  {
  #ifdef SAVE_DIR_PATH
@@ -255,8 +1767,8 @@
  #else
      FILE *handle = fopen("scores", mode);
  #endif
---- source-jp/initfile.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/initfile.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/initfile.cc	2012-04-15 23:25:39.550752581 +0900
++++ ./source-unicode/initfile.cc	2012-04-08 21:40:25.436014195 +0900
 @@ -15,7 +15,7 @@
  
  #include <stdio.h>
@@ -266,8 +1778,8 @@
  #include <ctype.h>
  
  #include "Kills.h"
---- source-jp/items.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/items.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/items.cc	2012-04-15 23:25:39.974084225 +0900
++++ ./source-unicode/items.cc	2012-04-08 21:40:25.486014197 +0900
 @@ -3088,7 +3088,7 @@
  //
  // - equipment cannot be destroyed... not only is this the more accurate
@@ -277,8 +1789,8 @@
  //   (including weight) which would cause a bit of a mess to state.
  //
  // - no item does anything for just carrying it... if that changes then
---- source-jp/it_use3.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/it_use3.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/it_use3.cc	2012-04-15 23:25:39.757418423 +0900
++++ ./source-unicode/it_use3.cc	2012-04-08 21:40:25.526014199 +0900
 @@ -15,6 +15,7 @@
  #include "it_use3.h"
  
@@ -287,8 +1799,8 @@
  
  #include "externs.h"
  
---- source-jp/Kills.cc	2011-07-22 12:04:38.000000000 +0900
-+++ source/Kills.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/Kills.cc	2012-04-15 23:25:38.344090729 +0900
++++ ./source-unicode/Kills.cc	2012-04-08 21:42:20.419351744 +0900
 @@ -47,12 +47,12 @@
  #if defined(WIN32CONSOLE) || defined(WINDOWS)
      kill &k = kills[descriptor];
@@ -393,8 +1905,8 @@
      kills = (unsigned short) readShort(file);
      exp   = readShort(file);
  
---- source-jp/Kills.h	2011-07-22 12:04:38.000000000 +0900
-+++ source/Kills.h	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/Kills.h	2012-04-15 23:25:38.364090649 +0900
++++ ./source-unicode/Kills.h	2012-04-08 21:40:25.606014201 +0900
 @@ -39,10 +39,10 @@
  };
  
@@ -418,8 +1930,8 @@
      std::vector<kill_ghost> ghosts;
  
      void record_ghost_kill(const struct monsters *mon);
---- source-jp/libutil.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/libutil.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/libutil.cc	2012-04-15 23:25:40.204083308 +0900
++++ ./source-unicode/libutil.cc	2012-04-08 21:40:25.636014203 +0900
 @@ -12,6 +12,7 @@
  #include <stdio.h>
  #include <string.h>
@@ -428,8 +1940,8 @@
  
  #ifdef USE_MULTIWIN
  #include "externs.h"
---- source-jp/macro.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/macro.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/macro.cc	2012-04-15 23:25:40.450748990 +0900
++++ ./source-unicode/macro.cc	2012-04-08 21:40:25.676014204 +0900
 @@ -34,7 +34,7 @@
  
  #include <iostream>
@@ -439,8 +1951,8 @@
  #include <map>
  #include <deque>
  
---- source-jp/makefile	2003-03-23 20:05:12.000000000 +0900
-+++ source/makefile	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/makefile	2012-04-15 23:25:03.007565012 +0900
++++ ./source-unicode/makefile	2012-04-08 21:40:25.709347539 +0900
 @@ -8,7 +8,7 @@
  
  #jmf: number of concurrent jobs -- good value is (#_of_CPUs * 2) + 1
@@ -450,15 +1962,129 @@
  
  all:
  	$(MAKE) $(OTHER) -f $(MAKEFILE) EXTRA_FLAGS='-O2 -fno-strength-reduce'
---- source-jp/makefile.lnx	2011-07-22 12:04:39.000000000 +0900
-+++ source/makefile.lnx	2011-07-22 11:44:15.000000000 +0900
-@@ -17,14 +17,14 @@
+--- ./source-old/makefile.bor	2012-04-15 23:25:40.504082111 +0900
++++ ./source-unicode/makefile.bor	2012-04-08 21:37:10.866007061 +0900
+@@ -1,53 +1,53 @@
+-#
+-# Makefile for Borland C++ 5.5 free commandline tools
+-#
+-
+-!include makefile.obj
+-
+-GAME = ..\crawl.exe
+-
+-all : $(GAME)
+-
+-.PHONY : clean
+-.PHONY : debug
+-.PHONY : noopt
+-.PHONY : install
+-.PHONY : wizard
+-
+-clean : 
+-	$(DEL) *.o
+-
+-debug : 
+-
+-noopt : 
+-
+-install : 
+-
+-wizard : 
+-
+-#
+-# Borland C++ tools
+-#
+-CC     = bcc32
+-LINK   = ilink32
+-DEL    = del
+-
+-# 
+-# windows defines,  including windows version to make sure code runs on
+-# all windows systems
+-#
+-WIN32DEFINES = WIN32CONSOLE;NEED_SPRINTF;WINVER=0x0400;_WIN32_WINNT=0x0400;__BCPLUSPLUS__;USE_ASCII_CHARACTERS;USE_COLOUR_OPTS;V_FIX;JP;
+-
+-#
+-# Options
+-#
+-LINKOPTS    = -Tpe -ap -c -x /V4.0
+-CFLAGS      = -I. -D$(WIN32DEFINES) -O2 -4 -a -k- -Oc -OS -Oi -Ov -H- -P -c
+-NICEFLAGS   = -w-8004
+-DEBUGFLAGS  = -v -y
+-
+-$(GAME) : $(OBJECTS) libw32c.o
+-	$(LINK) $(LINKOPTS) c0x32.obj $?, $(GAME),, import32.lib cw32.lib ws2_32.lib
+-
+-.cc.o:
+-	$(CC) $(CFLAGS) $(NICEFLAGS) -o$*.o $< 
++#
++# Makefile for Borland C++ 5.5 free commandline tools
++#
++
++!include makefile.obj
++
++GAME = ..\crawl.exe
++
++all : $(GAME)
++
++.PHONY : clean
++.PHONY : debug
++.PHONY : noopt
++.PHONY : install
++.PHONY : wizard
++
++clean : 
++	$(DEL) *.o
++
++debug : 
++
++noopt : 
++
++install : 
++
++wizard : 
++
++#
++# Borland C++ tools
++#
++CC     = bcc32
++LINK   = ilink32
++DEL    = del
++
++# 
++# windows defines,  including windows version to make sure code runs on
++# all windows systems
++#
++WIN32DEFINES = WIN32CONSOLE;NEED_SPRINTF;WINVER=0x0400;_WIN32_WINNT=0x0400;__BCPLUSPLUS__
++
++#
++# Options
++#
++LINKOPTS    = -Tpe -ap -c -x /V4.0
++CFLAGS      = -I. -D$(WIN32DEFINES) -4 -a -k- -Oc -OS -Oi -Ov -H- -P -c
++NICEFLAGS   = -w-8004
++DEBUGFLAGS  = -v -y
++
++$(GAME) : $(OBJECTS) libw32c.o
++	$(LINK) $(LINKOPTS) c0x32.obj $?, $(GAME),, import32.lib cw32.lib
++
++.cc.o:
++	$(CC) $(CFLAGS) $(NICEFLAGS) -o$*.o $< 
+--- ./source-old/makefile.lnx	2012-04-15 23:25:40.544081951 +0900
++++ ./source-unicode/makefile.lnx	2012-04-11 14:11:05.501196262 +0900
+@@ -16,15 +16,18 @@
+ OS_TYPE = LINUX
  EXTRA_FLAGS = -DJP -DWIZARD
  
- CFLAGS = -Wall -Wwrite-strings -Wstrict-prototypes \
+-CFLAGS = -Wall -Wwrite-strings -Wstrict-prototypes \
 -            -Wmissing-prototypes \
 -            -g -D$(OS_TYPE) $(EXTRA_FLAGS)
-+            -Wmissing-prototypes -Wno-char-subscripts\
++#CFLAGS = -Wall -Wwrite-strings -Wstrict-prototypes \
++            #-Wmissing-prototypes -Wno-char-subscripts\
++            #-fsigned-char -g -D$(OS_TYPE) $(EXTRA_FLAGS)
++
++CFLAGS = -Wall -Wwrite-strings -Wno-char-subscripts\
 +            -fsigned-char -g -D$(OS_TYPE) $(EXTRA_FLAGS)
  
  # LDFLAGS = -static
@@ -472,9 +2098,17 @@
  
  # Include for Linux
  INCLUDES = -I/usr/include/ncurses
---- source-jp/message.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/message.cc	2011-07-22 11:44:15.000000000 +0900
-@@ -212,7 +212,7 @@
+--- ./source-old/message.cc	2012-04-15 23:25:40.730747873 +0900
++++ ./source-unicode/message.cc	2012-04-12 18:46:58.824970518 +0900
+@@ -15,6 +15,7 @@
+ #include "religion.h"
+ 
+ #include <string.h>
++#include <sstream>
+ 
+ #ifdef DOS
+ #include <conio.h>
+@@ -212,7 +213,7 @@
  
  void mpr(const char *inf, int channel, int param)
  {
@@ -483,7 +2117,7 @@
  
      int colour = channel_to_colour( channel, param );
      if (colour == MSGCOL_MUTED)
-@@ -264,8 +264,8 @@
+@@ -264,8 +265,8 @@
      }
      gotoxy( (Options.delay_message_clear) ? 2 : 1, Message_Line + 18 );
  
@@ -494,8 +2128,30 @@
  
      textcolor( colour );
  #ifdef USE_TILE
---- source-jp/monplace.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/monplace.cc	2011-07-22 11:44:15.000000000 +0900
+@@ -414,15 +415,19 @@
+ 
+ std::string get_last_messages(int mcount)
+ {
++    bool full_buffer = true;
++    std::string text;
++
+     if (mcount <= 0) return std::string();
+     if (mcount > NUM_STORED_MESSAGES) mcount = NUM_STORED_MESSAGES;
+ 
+-    bool full_buffer = Store_Message[ NUM_STORED_MESSAGES - 1 ].text.length() == 0;
++    if (Store_Message[ NUM_STORED_MESSAGES - 1 ].text.length() == 0)
++        full_buffer = false;
++
+     int start = Next_Message - mcount;
+     if (start < 0)
+         start = full_buffer? start + NUM_STORED_MESSAGES : 0;
+ 
+-    std::string text;
+     int count = 0;
+     for (int i = start; i != Next_Message; ++i)
+     {
+--- ./source-old/monplace.cc	2012-04-15 23:25:41.040746636 +0900
++++ ./source-unicode/monplace.cc	2012-04-08 21:40:25.822680876 +0900
 @@ -11,6 +11,8 @@
  #include "AppHdr.h"
  #include "monplace.h"
@@ -505,8 +2161,8 @@
  #include "externs.h"
  #include "dungeon.h"
  #include "monstuff.h"
---- source-jp/monstuff.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/monstuff.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/monstuff.cc	2012-04-15 23:25:41.157412838 +0900
++++ ./source-unicode/monstuff.cc	2012-04-08 21:40:25.876014211 +0900
 @@ -965,6 +965,7 @@
      char str_polymon[INFO_SIZE] = "";      // cannot use info[] here {dlb}
      bool player_messaged = false;
@@ -535,8 +2191,567 @@
      // messaging: {dlb}
      bool invis = mons_flag( targetc, M_INVIS )
                      || mons_has_ench( monster, ENCH_INVIS );
---- source-jp/randart.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/randart.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/mon-util.h	2012-04-15 23:25:40.990746836 +0900
++++ ./source-unicode/mon-util.h	2012-04-11 14:07:54.537855560 +0900
+@@ -22,7 +22,8 @@
+ #define PACKED
+ #else
+ #ifndef PACKED
+-#define PACKED __attribute__ ((packed))
++//#define PACKED __attribute__ ((packed))
++#define PACKED
+ #endif
+ #endif
+ 
+--- ./source-old/ouch.cc	2012-04-15 23:25:41.370745320 +0900
++++ ./source-unicode/ouch.cc	2012-04-13 16:26:02.727759751 +0900
+@@ -1134,22 +1134,23 @@
+     invent( -1, !dead );
+     clrscr();
+ 
+-    std::string dump=dump_char2( "morgue.txt", !dead );
+-    if (!dump.length())
+-#ifdef JP
+-        mpr("キャラクターダンプは失敗した！ ご愁傷様。");
+-#else
+-        mpr("Char dump unsuccessful! Sorry about that.");
+-#endif
+-#if DEBUG_DIAGNOSTICS
++    if (dump_char( "morgue.txt", !dead )) {
+     //jmf: switched logic and moved "success" message to debug-only
+-    else
++#if DEBUG_DIAGNOSTICS
+ #ifdef JP
+         mpr("キャラクターダンプは成功した！ (morgue.txt).");
+ #else
+         mpr("Char dump successful! (morgue.txt).");
+ #endif
+ #endif // DEBUG
++	}
++    else {
++#ifdef JP
++        mpr("キャラクターダンプは失敗した！ ご愁傷様。");
++#else
++        mpr("Char dump unsuccessful! Sorry about that.");
++#endif
++	}
+ 
+     more();
+ 
+--- ./source-old/output.cc	2012-04-15 23:25:41.407411840 +0900
++++ ./source-unicode/output.cc	2012-04-13 14:44:28.047505545 +0900
+@@ -13,6 +13,8 @@
+ #include "output.h"
+ 
+ #include <stdlib.h>
++#include <string.h>
++#include <sstream>
+ 
+ #ifdef DOS
+ #include <conio.h>
+@@ -843,235 +845,265 @@
+ }
+ #endif
+ 
+-
+ #ifdef JP
+-void get_full_detail(char* buffer, bool calc_unid)
++void get_full_detail(std::string & text, bool calc_unid)
+ {
+-#define FIR_AD buffer,44
+-#define CUR_AD &buffer[++lines*45],44
+-#define BUF_SIZE 25*3*45
+-    int lines =0, i = 0, j = 0;
+-    char str_pass[ITEMNAME_SIZE];
+-
+-    for(i=0; i < BUF_SIZE; i++)
+-        buffer[i] = '\0';
+-
+-    snprintf(CUR_AD, "%s『%s』\0", player_title(), you.your_name);
+-    lines++;
+-    snprintf(CUR_AD, "種族     : %s\0", species_name(you.species,you.experience_level) );
+-    snprintf(CUR_AD, "職業     : %s\0", you.class_name);
+-    snprintf(CUR_AD, "信仰     : %s\0", god_name(you.religion) );
+-    snprintf(CUR_AD, "\0");
+-    snprintf(CUR_AD, "レベル     %7d\0", you.experience_level);
+-    snprintf(CUR_AD, "経験値     %7d\0", you.experience);
+-
+-    if (you.experience_level < 27)
+-    {
+-        int xp_needed = (exp_needed(you.experience_level+2) - you.experience) + 1;
+-        snprintf(CUR_AD, "次レベル   %7d\0", exp_needed(you.experience_level + 2) + 1);
+-        snprintf(CUR_AD, "必要経験値 %7d\0", xp_needed);
+-    }
+-    else
+-    {
+-        snprintf(CUR_AD, "次レベル   *******\0");
+-        snprintf(CUR_AD, "必要経験値 *******\0");
+-    }
+-
+-    snprintf(CUR_AD, "残り記憶力 %7d\0", player_spell_levels() );
+-
+-    snprintf(CUR_AD, "所持金     %7d\0", you.gold );
+-
+-    lines++;
+-/*
+-    snprintf(str_pass, ITEMNAME_SIZE, "%s\0",
+-             ( (you.hp > 0)       ? "":
+-               (you.deaths_door)  ? " (瀕死)":
+-                                    " (死亡)" ) );
+-*/
+-    if ( (you.hp_max + player_rotted() ) == you.hp_max )
+-    {
+-        snprintf(CUR_AD, "ＨＰ     : %3d/%3d\0",
+-                 you.hp, you.hp_max);
+-    }
+-    else
+-    {
+-        snprintf(CUR_AD, "ＨＰ     : %3d/%3d (%3d)\0",
+-                 you.hp, you.hp_max,
+-                 you.hp_max + player_rotted() );
+-    }
+-
+-    snprintf(CUR_AD, "ＭＰ     : %3d/%3d\0", you.magic_points, you.max_magic_points);
+-
+-    if (you.strength == you.max_strength)
+-    {
+-        snprintf(CUR_AD, "腕力     : %3d\0", you.strength);
+-    }
+-    else
+-    {
+-        snprintf(CUR_AD, "腕力     : %3d (%2d)\0", you.strength, you.max_strength);
+-    }
+-
+-    if (you.intel == you.max_intel)
+-    {
+-        snprintf(CUR_AD, "知力     : %3d\0", you.intel);
+-    }
+-    else
+-    {
+-        snprintf(CUR_AD, "知力     : %3d (%2d)\0", you.intel, you.max_intel);
+-    }
+-
+-    if (you.dex == you.max_dex)
+-    {
+-        snprintf(CUR_AD, "器用さ   : %3d\0", you.dex);
+-    }
+-    else
+-    {
+-        snprintf(CUR_AD, "器用さ   : %3d (%2d)\0", you.dex, you.max_dex);
+-    }
+-
+-    snprintf(CUR_AD, "ＡＣ     : %3d\0", player_AC() );
+-    snprintf(CUR_AD, "回避     : %3d\0", player_evasion() );
+-    snprintf(CUR_AD, "盾       : %3d\0", player_shield_class() );
+-    lines++;
+-
+-    if (you.real_time != -1)
+-    {
+-        const time_t curr = you.real_time + (time(NULL) - you.start_time);
+-        char buff[200];
+-        make_time_string( curr, buff, sizeof(buff) );
+-
+-        snprintf(CUR_AD, "プレイ時間 : %10s\0", buff);
+-        snprintf(CUR_AD, "経過ターン : %10d\0", you.num_turns );
+-    }
++	char buf[11], time_str[32], item_str[ITEMNAME_SIZE];
++	std::ostringstream ostr;
+ 
+-    lines = 27;
++	ostr << player_title() << "『" << you.your_name << "』" << EOL << EOL;
+ 
+-    snprintf(CUR_AD, "火炎耐性 : %s\0", itosym3( player_res_fire(calc_unid) ) );
+-    //snprintf(CUR_AD, " /%2d", player_res_fire() );
+-    snprintf(CUR_AD, "冷気耐性 : %s\0", itosym3( player_res_cold(calc_unid) ) );
+-    //snprintf(CUR_AD, " /%2d", player_res_cold() );
+-    snprintf(CUR_AD, "衰弱耐性 : %s\0", itosym3( player_prot_life(calc_unid) ) );
+-    //snprintf(CUR_AD, " /%2d", player_prot_life() );
+-    snprintf(CUR_AD, "毒素耐性 : %s\0", itosym1( player_res_poison(calc_unid) ) );
+-    //snprintf(CUR_AD, " /%2d", player_res_poison() );
+-    snprintf(CUR_AD, "電撃耐性 : %s\0", itosym1( player_res_electricity(calc_unid) ) );
+-    //snprintf(CUR_AD, " /%2d", player_res_electricity() );
+-    lines++;
+-
+-    snprintf(CUR_AD, "能力維持 : %s\0", itosym1( player_sust_abil(calc_unid) ) );
+-    snprintf(CUR_AD, "耐変異   : %s\0", itosym1( wearing_amulet( AMU_RESIST_MUTATION, calc_unid) ) );
+-    snprintf(CUR_AD, "耐減速   : %s\0", itosym1( wearing_amulet( AMU_RESIST_SLOW, calc_unid) ) );
+-    snprintf(CUR_AD, "明晰     : %s\0", itosym1( wearing_amulet( AMU_CLARITY, calc_unid) ) );
+-    lines++;
+-    lines++;
+-/*
+-    if (you.wizard)
+-    {
+-        lines++;
+-        snprintf(CUR_AD, "攻撃速度 : %2d\0", check_weapon_speed() );
+-        snprintf(CUR_AD, "移動速度 : %2d\0", player_movement_speed() );
+-        snprintf(CUR_AD, "魔法抵抗 : %2d\0", player_res_magic(calc_unid) / 10 );
+-        //snprintf(CUR_AD, " /%2d", (player_res_magic() + 1) / 10 );
+-        snprintf(CUR_AD, "隠密性　 : %2d\0", check_stealth(calc_unid) / 10 );
+-        lines++;
+-    }
+-    else
+-*/
+-    {
+-        const char *e_items[] = {"武器  ", "鎧    ", "盾    ", "兜    ", "外套  ",
+-                                 "小手  ", "靴    ", "護符  ", "指輪  ", "指輪  "};
+-        const int   e_order[] = {EQ_WEAPON, EQ_BODY_ARMOUR, EQ_SHIELD, EQ_HELMET, EQ_CLOAK,
+-                                 EQ_GLOVES, EQ_BOOTS, EQ_AMULET, EQ_RIGHT_RING, EQ_LEFT_RING};
+-
+-        for(i=0; i < NUM_EQUIP; i++)
+-        {
+-            if ( you.equip[ e_order[i] ] != -1)
+-            {
+-                in_name( you.equip[ e_order[i] ], DESC_PLAIN, str_pass, Options.terse_hand );
+-                snprintf(CUR_AD, "%s%s\0", e_items[i], &str_pass);
+-            }
+-            else
+-            {
+-                if (e_order[i] == EQ_WEAPON)
+-                {
+-                    if (you.attribute[ATTR_TRANSFORMATION] == TRAN_BLADE_HANDS)
+-                        snprintf(CUR_AD, "%s刃の手\0", e_items[i]);
+-                    else if (you.skills[SK_UNARMED_COMBAT])
+-                        snprintf(CUR_AD, "%s徒手格闘\0", e_items[i]);
+-                    else
+-                        snprintf(CUR_AD, "%sなし\0", e_items[i]);
+-                }
+-                else
+-                {
+-                        snprintf(CUR_AD, "%sなし\0", e_items[i]);
+-                }
+-            }
+-        }
+-    }
+-
+-    lines = 52;
+-    snprintf(CUR_AD, "霊視     : %s\0", itosym1( player_see_invis(calc_unid) ) );
+-    snprintf(CUR_AD, "結界     : %s\0", itosym1( wearing_amulet(AMU_WARDING, calc_unid)
+-                                               ||(you.religion == GOD_VEHUMET && you.duration[DUR_PRAYER]
+-                                               && (!player_under_penance() && you.piety >= 75) )
+-                                               ) );
+-    snprintf(CUR_AD, "保全     : %s\0", itosym1( wearing_amulet( AMU_CONSERVATION, calc_unid) ) );
+-    snprintf(CUR_AD, "腐蝕阻止 : %s\0", itosym1( wearing_amulet( AMU_RESIST_CORROSION, calc_unid) ) );
+-
+-    if ( !wearing_amulet( AMU_THE_GOURMAND, calc_unid) )
+-    {
+-        switch (you.species)
+-        {
+-        case SP_GHOUL:
+-            snprintf(CUR_AD, "腐肉喰い : %s\0", itosym3(3) );
+-            break;
+-
+-        case SP_KOBOLD:
+-        case SP_TROLL:
+-            snprintf(CUR_AD, "腐肉喰い : %s\0", itosym3(2) );
+-            break;
+-
+-        case SP_HILL_ORC:
+-        case SP_OGRE:
+-            snprintf(CUR_AD, "腐肉喰い : %s\0", itosym3(1) );
+-            break;
++	ostr << "種族     : " << species_name(you.species, you.experience_level);
++	utf8_indent(species_name(you.species, you.experience_level), 17, ostr);
++	ostr << "火炎耐性 : " << itosym3(player_res_fire(calc_unid));
++	ostr << "   霊視     : " << itosym1(player_see_invis(calc_unid)) << EOL;
++
++	ostr << "職業     : " << you.class_name;
++	utf8_indent(you.class_name, 17, ostr);
++	ostr << "冷気耐性 : " << itosym3(player_res_cold(calc_unid));
++	ostr << "   結界     : " << itosym1(wearing_amulet(AMU_WARDING, calc_unid)
++		|| (you.religion == GOD_VEHUMET && you.duration[DUR_PRAYER]
++		&& (!player_under_penance() && you.piety >= 75))) << EOL;
++
++	ostr << "信仰     : " << god_name(you.religion);
++	utf8_indent(god_name(you.religion), 17, ostr);
++	ostr << "衰弱耐性 : " << itosym3(player_prot_life(calc_unid)) << "   ";
++	ostr << "保全     : " << itosym1(wearing_amulet( AMU_CONSERVATION, calc_unid)) << EOL;
++
++	ostr << "                            ";
++	ostr << "毒素耐性 : " << itosym1(player_res_poison(calc_unid)) << "       ";
++	ostr << "腐蝕阻止 : " << itosym1(wearing_amulet( AMU_RESIST_CORROSION, calc_unid)) << EOL;
++
++	snprintf(buf, 8, "%7d", you.experience_level);
++	ostr << "レベル     " << buf << "          ";
++	ostr << "電撃耐性 : " << itosym1(player_res_electricity(calc_unid)) << "       ";
++	if (!wearing_amulet(AMU_THE_GOURMAND, calc_unid)) {
++		switch (you.species) {
++		case SP_GHOUL:
++			ostr << "腐肉喰い : " << itosym3(3);
++			break;
++		case SP_KOBOLD:
++		case SP_TROLL:
++			ostr << "腐肉喰い : " << itosym3(2);
++			break;
++		case SP_HILL_ORC:
++		case SP_OGRE:
++			ostr << "腐肉喰い : " << itosym3(1);
++			break;
+ #ifdef V_FIX
+-        case SP_OGRE_MAGE:
+-            snprintf(CUR_AD, "大食     : %s\0", itosym1(1) );
+-            break;
+-#endif
+-        default:
+-            snprintf(CUR_AD, "悪食     : %s\0", itosym1(0) );
+-            break;
+-        }
+-    }
+-    else
+-    {
+-        snprintf(CUR_AD, "悪食     : %s\0", itosym1( wearing_amulet( AMU_THE_GOURMAND, calc_unid) ) );
+-    }
+-
+-    lines++;
+-
+-    if ( scan_randarts(RAP_PREVENT_TELEPORTATION, calc_unid) )
+-        snprintf(CUR_AD, "転位阻害 : %s\0", itosym1( scan_randarts(RAP_PREVENT_TELEPORTATION, calc_unid) ) );
+-    else
+-    {
+-      //snprintf(CUR_AD, "転位誘発 : %s\0", itosym3( (player_teleport(calc_unid) + 11) / 12 ) );
+-        snprintf(CUR_AD, "転位誘発 : %s\0", itosym1( player_teleport(calc_unid) ) );
+-    }
+-
+-    if ( ( you.attribute[ATTR_CONTROL_TELEPORT] <= 1 )
+-       &&( !player_equip( EQ_RINGS, RING_TELEPORT_CONTROL, calc_unid) ) )
+-        snprintf(CUR_AD, "転位制御 : %s\0", itosym1( 0 ) );
+-    else
+-        snprintf(CUR_AD, "転位制御 : %s\0", itosym1( 1 ) );
+-
+-    snprintf(CUR_AD, "浮遊     : %s\0", itosym1( player_is_levitating() ) );
+-    snprintf(CUR_AD, "飛行制御 : %s\0", itosym1( wearing_amulet(AMU_CONTROLLED_FLIGHT, calc_unid) ) );
+-
+-    lines++;
++		case SP_OGRE_MAGE:
++			ostr << "大食     : " << itosym1(1);
++			break;
++#endif
++		default:
++			ostr << "悪食     : " << itosym1(0);
++			break;
++		}
++	}
++	else
++		ostr << "悪食     : " << itosym1(wearing_amulet(AMU_THE_GOURMAND, calc_unid));
++	ostr << EOL;
++
++	snprintf(buf, 8, "%7ld", you.experience);
++	ostr << "経験値     " << buf << EOL;
++
++	ostr << "次レベル   ";
++	if (you.experience_level < 27) {
++		snprintf(buf, 8, "%7ld", exp_needed(you.experience_level + 2) + 1);
++		ostr << buf;
++	}
++	else
++		ostr << "*******";
++	ostr << "          ";
++	ostr << "能力維持 : " << itosym1(player_sust_abil(calc_unid)) << "       ";
++	if (scan_randarts(RAP_PREVENT_TELEPORTATION, calc_unid))
++	ostr << "転位阻害 : " << itosym1(scan_randarts(RAP_PREVENT_TELEPORTATION, calc_unid));
++	else
++	{
++	ostr << "転位誘発 : " << itosym1(player_teleport(calc_unid));
++	}
++	ostr << EOL;
++
++	ostr << "必要経験値 ";
++	if (you.experience_level < 27) {
++		snprintf(buf, 8, "%7ld", (exp_needed(you.experience_level + 2) - you.experience) + 1);
++		ostr << buf;
++	}
++	else
++		ostr << "*******";
++	ostr << "          ";
++	ostr << "耐変異   : " << itosym1(wearing_amulet(AMU_RESIST_MUTATION, calc_unid)) << "       ";
++	if ((you.attribute[ATTR_CONTROL_TELEPORT] <= 1)
++	   &&(!player_equip(EQ_RINGS, RING_TELEPORT_CONTROL, calc_unid)))
++	ostr << "転位制御 : " << itosym1(0);
++	else
++	ostr << "転位制御 : " << itosym1(1);
++	ostr << EOL;
++
++	snprintf(buf, 8, "%7d", player_spell_levels());
++	ostr << "残り記憶力 " << buf << "          ";
++	ostr << "耐減速   : " << itosym1(wearing_amulet(AMU_RESIST_SLOW, calc_unid)) << "       ";
++	ostr << "浮遊     : " << itosym1(player_is_levitating()) << EOL;
++
++	snprintf(buf, 8, "%7d", you.gold);
++	ostr << "所持金     " << buf << "          ";
++	ostr << "明晰     : " << itosym1(wearing_amulet(AMU_CLARITY, calc_unid)) << "       ";
++	ostr << "飛行制御 : " << itosym1(wearing_amulet(AMU_CONTROLLED_FLIGHT, calc_unid)) << "\n\n";
++
++	snprintf(buf, 8, "%3d/%3d", you.hp, you.hp_max);
++	ostr << "ＨＰ     : " << buf;
++	if ( (you.hp_max + player_rotted() ) != you.hp_max ) {
++		snprintf(buf, 4, "%3d", you.hp_max + player_rotted());
++		ostr << "(" << buf << ")";
++	}
++	ostr << EOL;
++
++	snprintf(buf, 8, "%3d/%3d", you.magic_points, you.max_magic_points);
++	ostr << "ＭＰ     : " << buf << "          ";
++	ostr << "武器  ";
++	if (you.equip[EQ_WEAPON] != -1) {
++		in_name(you.equip[EQ_WEAPON], DESC_PLAIN, item_str, Options.terse_hand);
++		ostr << item_str;
++	}
++	else {
++		if (you.attribute[ATTR_TRANSFORMATION] == TRAN_BLADE_HANDS)
++			ostr << "刃の手";
++		else if (you.skills[SK_UNARMED_COMBAT])
++			ostr << "徒手格闘";
++		else
++			ostr << "なし";
++	}
++	ostr << EOL;
++
++	snprintf(buf, 4, "%3d", you.strength);
++	ostr << "腕力     : " << buf;
++	if (you.strength == you.max_strength)
++		ostr << "    ";
++	else {
++		snprintf(buf, 3, "%2d", you.max_strength);
++		ostr << "(" << buf << ")";
++	}
++	ostr << "          ";
++	ostr << "鎧    ";
++	if (you.equip[EQ_BODY_ARMOUR] != -1) {
++		in_name(you.equip[EQ_BODY_ARMOUR], DESC_PLAIN, item_str, Options.terse_hand);
++		ostr << item_str;
++	}
++	else
++		ostr << "なし";
++	ostr << EOL;
++
++	snprintf(buf, 4, "%3d", you.intel);
++	ostr << "知力     : " << buf;
++	if (you.intel == you.max_intel)
++		ostr << "    ";
++	else {
++		snprintf(buf, 3, "%2d", you.max_intel);
++		ostr << "(" << buf << ")";
++	}
++	ostr << "          ";
++	ostr << "盾    ";
++	if (you.equip[EQ_SHIELD] != -1) {
++		in_name(you.equip[EQ_SHIELD], DESC_PLAIN, item_str, Options.terse_hand);
++		ostr << item_str;
++	}
++	else
++		ostr << "なし";
++	ostr << EOL;
++
++	snprintf(buf, 4, "%3d", you.dex);
++	ostr << "器用さ   : " << buf;
++	if (you.dex == you.max_dex)
++		ostr << "    ";
++	else {
++		snprintf(buf, 3, "%2d", you.max_dex);
++		ostr << "(" << buf << ")";
++	}
++	ostr << "          ";
++	ostr << "兜    ";
++	if (you.equip[EQ_HELMET] != -1) {
++		in_name(you.equip[EQ_HELMET], DESC_PLAIN, item_str, Options.terse_hand);
++		ostr << item_str;
++	}
++	else
++		ostr << "なし";
++	ostr << EOL;
++
++	snprintf(buf, 4, "%3d", player_AC());
++	ostr << "ＡＣ     : " << buf;
++	ostr << "              ";
++	ostr << "外套  ";
++	if (you.equip[EQ_CLOAK] != -1) {
++		in_name(you.equip[EQ_CLOAK], DESC_PLAIN, item_str, Options.terse_hand);
++		ostr << item_str;
++	}
++	else
++		ostr << "なし";
++	ostr << EOL;
++
++	snprintf(buf, 4, "%3d", player_evasion());
++	ostr << "回避     : " << buf;
++	ostr << "              ";
++	ostr << "小手  ";
++	if (you.equip[EQ_GLOVES] != -1) {
++		in_name(you.equip[EQ_GLOVES], DESC_PLAIN, item_str, Options.terse_hand);
++		ostr << item_str;
++	}
++	else
++		ostr << "なし";
++	ostr << EOL;
++
++	snprintf(buf, 4, "%3d", player_shield_class());
++	ostr << "盾       : " << buf;
++	ostr << "              ";
++	ostr << "靴    ";
++	if (you.equip[EQ_BOOTS] != -1) {
++		in_name(you.equip[EQ_BOOTS], DESC_PLAIN, item_str, Options.terse_hand);
++		ostr << item_str;
++	}
++	else
++		ostr << "なし";
++	ostr << EOL;
++
++	ostr << "                            ";
++	ostr << "護符  ";
++	if (you.equip[EQ_AMULET] != -1) {
++		in_name(you.equip[EQ_AMULET], DESC_PLAIN, item_str, Options.terse_hand);
++		ostr << item_str;
++	}
++	else
++		ostr << "なし";
++	ostr << EOL;
++
++	if (you.real_time != -1) {
++		make_time_string(you.real_time + time(NULL) - you.start_time, time_str, sizeof(time_str));
++
++		snprintf(buf, 11, "%10s", time_str);
++		ostr << "プレイ時間 : " << buf;
++		ostr << "     ";
++		ostr << "指輪  ";
++		if (you.equip[EQ_RIGHT_RING] != -1) {
++			in_name(you.equip[EQ_RIGHT_RING], DESC_PLAIN, item_str, Options.terse_hand);
++			ostr << item_str;
++		}
++		else
++			ostr << "なし";
++		ostr << EOL;
++
++		snprintf(buf, 11, "%10ld", you.num_turns);
++		ostr << "経過ターン : " << buf;
++		ostr << "     ";
++		ostr << "指輪  ";
++		if (you.equip[EQ_LEFT_RING] != -1) {
++			in_name(you.equip[EQ_LEFT_RING], DESC_PLAIN, item_str, Options.terse_hand);
++			ostr << item_str;
++		}
++		else
++			ostr << "なし";
++		ostr << EOL;
++	}
+ 
+-    return;
++	text += ostr.str();
+ }
+ 
+ #else
+--- ./source-old/output.h	2012-04-15 23:25:41.437411720 +0900
++++ ./source-unicode/output.h	2012-04-11 12:39:33.120993399 +0900
+@@ -17,7 +17,8 @@
+  * called from: acr - player - stuff
+  * *********************************************************************** */
+ void print_stats(void);
+-void get_full_detail(char* buffer, bool calc_unid);
++//void get_full_detail(char* buffer, bool calc_unid);
++void get_full_detail(std::string & text, bool calc_unid);
+ 
+ 
+ #endif
+--- ./source-old/randart.cc	2012-04-15 23:25:41.637410923 +0900
++++ ./source-unicode/randart.cc	2012-04-11 14:09:14.211191766 +0900
 @@ -17,6 +17,7 @@
  
  #include <string.h>
@@ -545,8 +2760,18 @@
  
  #include "externs.h"
  #include "itemname.h"
---- source-jp/sendscore.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/sendscore.cc	2011-07-22 11:44:15.000000000 +0900
+@@ -1359,7 +1360,8 @@
+ #if defined(MAC) || defined(__IBMCPP__) || defined(__BCPLUSPLUS__)
+ #define PACKED
+ #else
+-#define PACKED __attribute__ ((packed))
++//#define PACKED __attribute__ ((packed))
++#define PACKED
+ #endif
+ 
+ //int unranddatasize;
+--- ./source-old/sendscore.cc	2012-04-15 23:25:41.827410165 +0900
++++ ./source-unicode/sendscore.cc	2012-04-08 21:40:25.959347548 +0900
 @@ -16,6 +16,8 @@
  #include "AppHdr.h"
  #include "sendscore.h"
@@ -556,17 +2781,34 @@
  #include <string>
  
  #if defined(WINDOWS) || defined(WIN32CONSOLE)
---- source-jp/skills2.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/skills2.cc	2011-07-22 11:44:15.000000000 +0900
-@@ -21,6 +21,7 @@
+--- ./source-old/shopping.cc	2012-04-15 23:25:41.874076645 +0900
++++ ./source-unicode/shopping.cc	2012-04-12 16:11:25.707969710 +0900
+@@ -205,9 +205,10 @@
+ 
+         string desc;
+         if (is_dumpable_artifact(mitm[itty], Options.verbose_dump))
+-            desc = munge_description(get_item_description(mitm[itty],
+-                                                          Options.verbose_dump,
+-                                                          true ));
++            desc = munge_description(get_item_description(mitm[itty],Options.verbose_dump,true ));
++            //desc = get_item_description(mitm[itty], Options.verbose_dump, true);
++                                                          
++                                                          
+ #   ifdef STASH_TRACKING
+         si.add_item(string(st_pass), desc, gp_value);
+ #   endif
+--- ./source-old/skills2.cc	2012-04-15 23:25:41.974076246 +0900
++++ ./source-unicode/skills2.cc	2012-04-14 01:01:14.786608130 +0900
+@@ -21,6 +21,8 @@
  #include <stdio.h>
  #include <stdlib.h>
  #include <ctype.h>
 +#include <string.h>
++#include <sstream>
  
  #ifdef DOS
  #include <conio.h>
-@@ -120,7 +121,7 @@
+@@ -120,7 +122,7 @@
      {"予見術", "手相見", "占い", "占い師", "預言者", "神託者"},
  #else
      {"Spellcasting", "Magician", "Thaumaturge", "Eclecticist", "Sorcerer", "Archmage"},     // 25
@@ -575,8 +2817,38 @@
      {"Enchantments", "Charm-Maker", "Infuser", "Bewitcher", "Enchanter", "Spellbinder"},
      {"Summonings", "Caller", "Summoner", "Convoker", "Demonologist", "Hellbinder"},
      {"Necromancy", "Grave Robber", "Reanimator", "Necromancer", "Thanatomancer", "%s of Death"},
---- source-jp/spells4.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/spells4.cc	2011-07-22 11:44:15.000000000 +0900
+@@ -1886,7 +1888,7 @@
+     char scrln = 3, scrcol = 1;
+ 
+     // Don't want the help line to appear too far down a big window.
+-    int bottom_line = ((num_lines > 30) ? 30 : num_lines);
++    int bottom_line = ((num_lines > 25) ? 25 : num_lines);
+ 
+     for (x = 0; x < NUM_SKILLS; x++)
+     {
+@@ -1934,10 +1936,16 @@
+ #endif
+ 
+ #ifdef JP
+-            cprintf( " %c %-14s スキル%2d", \
+-                        (you.skills[x] == 0) ? ' ' : \
+-                        (you.practise_skill[x] == 0) ? '-' : \
+-                        '+', skills[x][0], you.skills[x] );
++			char buf[3];
++			std::ostringstream ostr;
++
++			ostr << " " << ((you.skills[x] == 0) ? ' ' : (you.practise_skill[x] == 0) ? '-' : '+') << " ";
++			ostr << skills[x][0];
++			utf8_indent(skills[x][0], 14, ostr);
++			snprintf(buf, 3, "%2d", you.skills[x]);
++			ostr << "スキル" << buf;
++
++			cprintf(ostr.str().c_str());
+ #else
+             cprintf( " %c %-14s Skill %2d", (you.skills[x] == 0)         ? ' ' : (you.practise_skill[x] == 0) ? '-' : '+', skills[x][0], you.skills[x] );
+ #endif
+--- ./source-old/spells4.cc	2012-04-15 23:25:42.197408688 +0900
++++ ./source-unicode/spells4.cc	2012-04-08 21:40:26.056014218 +0900
 @@ -12,8 +12,9 @@
  
  #include "AppHdr.h"
@@ -588,8 +2860,50 @@
  
  #include "externs.h"
  
---- source-jp/stash.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/stash.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/spl-book.cc	2012-04-15 23:25:42.244075169 +0900
++++ ./source-unicode/spl-book.cc	2012-04-14 21:03:49.626519101 +0900
+@@ -805,7 +805,7 @@
+     cprintf( str_pass );
+ 
+ #ifdef JP
+-    cprintf( EOL EOL " 呪文                               系統                     レベル" EOL );
++    cprintf( EOL EOL "呪文                              系統                         LV" EOL );
+ #else
+     cprintf( EOL EOL " Spells                             Type                      Level" EOL );
+ #endif
+--- ./source-old/spl-cast.cc	2012-04-15 23:25:42.304074929 +0900
++++ ./source-unicode/spl-cast.cc	2012-04-14 20:56:44.524872940 +0900
+@@ -116,7 +116,7 @@
+     clrscr();
+ 
+ #ifdef JP
+-    cprintf( " 呪文                             系統                          成功率  レベル" );
++    cprintf( "呪文                              系統                    成功率     LV" );
+ #else
+     cprintf( " Your Spells                      Type                          Success   Level" );
+ #endif
+@@ -191,8 +191,8 @@
+ 
+             char sval[16];
+ 
+-            //gotoxy(58, wherey());
+-            gotoxy(65, wherey());
++            gotoxy(59, wherey());
++            //gotoxy(65, wherey());
+ 
+             int spell_f = spell_fail( spell );
+ 
+@@ -224,7 +224,7 @@
+                                       : "Perfect" );
+ #endif
+ 
+-            gotoxy(77, wherey());
++            gotoxy(71, wherey());
+ 
+             itoa( (int) spell_difficulty( spell ), sval, 10 );
+             cprintf(sval);
+--- ./source-old/stash.cc	2012-04-15 23:25:42.424074451 +0900
++++ ./source-unicode/stash.cc	2012-04-12 16:11:49.577969604 +0900
 @@ -16,10 +16,11 @@
  #include "travel.h"
  #include <fstream>
@@ -604,8 +2918,91 @@
  using namespace std;
  
  
---- source-jp/tags.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/tags.cc	2011-07-22 11:44:15.000000000 +0900
+@@ -218,10 +219,11 @@
+ 
+            << endl;
+ 
++		string desc;
+         if (is_dumpable_artifact(item, Options.verbose_dump)) {
+-            string desc = munge_description(get_item_description(item,
+-                                                          Options.verbose_dump,
+-                                                          true ));
++            desc = munge_description(get_item_description(item, Options.verbose_dump, true));
++            //desc = get_item_description(item, Options.verbose_dump, true);
++                                                          
+             // Kill leading and trailing whitespace
+             desc.erase(desc.find_last_not_of(" \n\t") + 1);
+             desc.erase(0, desc.find_first_not_of(" \n\t"));
+--- ./source-old/stuff.cc	2012-04-15 23:25:42.464074291 +0900
++++ ./source-unicode/stuff.cc	2012-04-13 15:55:26.419072826 +0900
+@@ -18,6 +18,7 @@
+ #include <stdio.h>
+ #include <string.h>
+ #include <ctype.h>
++#include <sstream>
+ 
+ // may need this later for something else {dlb}:
+ // required for table_lookup() {dlb}
+@@ -748,3 +749,40 @@
+ 
+     return false;
+ }
++
++#ifdef JP
++int utf8_strwidth(const char *cp)
++{
++    unsigned char byte;
++    int width = 0;
++    const char *eos = strchr(cp, '\0');;
++
++    while (cp != eos) {
++        byte = *cp;
++		/*
++			0***: ascii
++			10**: not first byte
++			110*: 2byte char
++			1110: 3byte char
++			1111*: 4byte char
++		*/
++        if ((byte & 0xC0) != 0x80) { // is first byte
++			if ((byte & 0x80) == 0x00) // is ascii
++				width++;
++			else // assume all multi-byte chars are double width
++            	width += 2;
++		}
++        cp++;
++    }
++
++    return width; 
++}
++
++void utf8_indent(const char *cp, int indent, std::ostringstream & ostr)
++{
++    int width = utf8_strwidth(cp);
++
++    while (width++ < indent)
++        ostr << " ";
++}
++#endif
+--- ./source-old/stuff.h	2012-04-15 23:25:02.460900526 +0900
++++ ./source-unicode/stuff.h	2012-04-13 14:38:20.612435150 +0900
+@@ -193,5 +193,14 @@
+     return ((flags & test) == test);
+ }
+ 
++// functions related to UTF-8
++/* ***********************************************************************
++ * called from: output - chardump
++ * *********************************************************************** */
++#ifdef JP
++int utf8_strwidth(const char *cp);
++void utf8_indent(const char *cp, int indent, std::ostringstream & ostr);
++#endif
++
+ #endif
+ 
+--- ./source-old/tags.cc	2012-04-15 23:25:42.507407452 +0900
++++ ./source-unicode/tags.cc	2012-04-08 21:40:26.136014221 +0900
 @@ -76,6 +76,7 @@
  #endif
  
@@ -614,8 +3011,8 @@
  
  #include "abl-show.h"
  #include "enum.h"
---- source-jp/travel.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/travel.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/travel.cc	2012-04-15 23:25:42.770739734 +0900
++++ ./source-unicode/travel.cc	2012-04-08 21:40:26.179347555 +0900
 @@ -20,6 +20,8 @@
  #include "travel.h"
  #include "view.h"
@@ -625,8 +3022,8 @@
  #include <ctype.h>
  
  #ifdef DOS
---- source-jp/view.cc	2011-07-22 12:04:39.000000000 +0900
-+++ source/view.cc	2011-07-22 11:44:15.000000000 +0900
+--- ./source-old/view.cc	2012-04-15 23:25:42.900739216 +0900
++++ ./source-unicode/view.cc	2012-04-08 21:40:26.239347558 +0900
 @@ -2741,7 +2741,7 @@
  
      start_y = screen_y - half_screen;

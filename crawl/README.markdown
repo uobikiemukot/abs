@@ -1,4 +1,4 @@
-# crawl: Linley's Dungeon Crawl
+# crawl: Linley's Dungeon Crawl (EUC-JP)
 
 ## feature
 * apply following patch
