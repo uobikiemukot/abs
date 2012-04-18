@@ -1,4 +1,15 @@
---- ./source-old/acr.cc	2012-04-15 23:25:38.484090170 +0900
+--- ./source-old/abl-show.cc	2012-04-19 00:45:12.932853373 +0900
++++ ./source-unicode/abl-show.cc	2012-04-19 00:42:39.300269090 +0900
+@@ -1731,7 +1731,7 @@
+ 
+                 cprintf( cost_str.c_str() );
+ 
+-                gotoxy(60, wherey());
++                gotoxy(59, wherey());
+ 
+                 int spell_f = Curr_abil[loopy].fail;
+ 
+--- ./source-old/acr.cc	2012-04-19 00:45:13.016186300 +0900
 +++ ./source-unicode/acr.cc	2012-04-13 16:25:49.667816614 +0900
 @@ -53,6 +53,7 @@
  #include <string.h>
@@ -72,7 +83,7 @@
  #endif
          mpr(info);
          break;
---- ./source-old/AppHdr.h	2012-04-15 23:25:38.300757142 +0900
+--- ./source-old/AppHdr.h	2012-04-19 00:45:12.839520494 +0900
 +++ ./source-unicode/AppHdr.h	2012-04-08 21:40:24.989347265 +0900
 @@ -408,7 +408,7 @@
      // Setting it to nothing or not setting it will cause all game files to
@@ -96,7 +107,7 @@
  
      // This provides some rudimentary protection against people using
      // save file cheats on multi-user systems.
---- ./source-old/chardump.cc	2012-04-15 23:25:38.594089731 +0900
+--- ./source-old/chardump.cc	2012-04-19 00:45:13.116185813 +0900
 +++ ./source-unicode/chardump.cc	2012-04-13 23:27:37.172289330 +0900
 @@ -17,6 +17,7 @@
  #include "chardump.h"
@@ -850,7 +861,7 @@
 -    return succeeded?text:(string)"";//(succeeded);
 +    return succeeded;
  }                               // end dump_char()
---- ./source-old/chardump.h	2012-04-15 23:25:38.627422931 +0900
+--- ./source-old/chardump.h	2012-04-19 00:45:13.149518984 +0900
 +++ ./source-unicode/chardump.h	2012-04-13 22:05:00.074751812 +0900
 @@ -20,7 +20,6 @@
   * called from: acr - ouch
@@ -860,8 +871,8 @@
  std::string munge_description(const std::string &inStr);
  
  #endif
---- ./source-old/describe.cc	2012-04-15 23:25:38.900755174 +0900
-+++ ./source-unicode/describe.cc	2012-04-14 14:26:39.663238720 +0900
+--- ./source-old/describe.cc	2012-04-19 00:45:13.526183815 +0900
++++ ./source-unicode/describe.cc	2012-04-19 00:39:12.334614933 +0900
 @@ -1,5 +1,4 @@
 -/*
 - *  File:       describe.cc
@@ -869,16 +880,17 @@
   *  Summary:    Functions used to print information about various game objects.
   *  Written by: Linley Henzell
   *
-@@ -21,7 +20,7 @@
+@@ -21,7 +20,8 @@
  
  #include <stdlib.h>
  #include <stdio.h>
 -#include <string>
 +#include <string.h>
++#include <sstream>
  
  #ifdef DOS
  #include <conio.h>
-@@ -42,6 +41,7 @@
+@@ -42,6 +42,7 @@
  #include "stuff.h"
  #include "wpn-misc.h"
  #include "spl-util.h"
@@ -886,7 +898,7 @@
  
  
  // ========================================================================
-@@ -77,96 +77,34 @@
+@@ -77,96 +78,34 @@
  // word and such. The character $ is interpreted as a CR.
  //
  //---------------------------------------------------------------
@@ -999,7 +1011,7 @@
  }
  
  
-@@ -180,8 +118,6 @@
+@@ -180,8 +119,6 @@
  //---------------------------------------------------------------
  static void randart_descpr( std::string &description, const item_def &item )
  {
@@ -1008,7 +1020,7 @@
      FixedVector< char, RA_PROPERTIES > proprt;
      randart_wpn_properties( item, proprt );
  
-@@ -545,16 +481,12 @@
+@@ -545,16 +482,12 @@
          description += "$It emits mutagenic radiations.";
  #endif
  
@@ -1025,7 +1037,7 @@
          }
      }
  }
-@@ -1125,9 +1057,7 @@
+@@ -1125,9 +1058,7 @@
          break;
      }
  
@@ -1036,7 +1048,7 @@
      description += ".";
  #endif
  
-@@ -1311,10 +1241,6 @@
+@@ -1311,10 +1242,6 @@
  {
      std::string description;
  
@@ -1047,7 +1059,7 @@
      if (is_fixed_artefact( item ))
      {
          if (item_ident( item, ISFLAG_KNOW_PROPERTIES ))
-@@ -1464,24 +1390,23 @@
+@@ -1464,24 +1391,23 @@
  #endif
                  break;
              }
@@ -1076,7 +1088,7 @@
      }
      else
      {
-@@ -1892,9 +1817,8 @@
+@@ -1892,9 +1818,8 @@
                  DEBUGSTR("Unknown weapon");
  #endif
              }
@@ -1087,7 +1099,7 @@
      }
  
      if (verbose == 1 && !launches_things( item.sub_type ))
-@@ -1920,8 +1844,8 @@
+@@ -1920,8 +1845,8 @@
  #endif
          append_value(description, property( item, PWPN_SPEED ) * 10, false);
          description += "%%";
@@ -1097,7 +1109,7 @@
  
      if (!is_fixed_artefact( item ))
      {
-@@ -1933,6 +1857,7 @@
+@@ -1933,6 +1858,7 @@
          // special weapon descrip
          if (spec_ench != SPWPN_NORMAL && item_ident( item, ISFLAG_KNOW_TYPE ))
          {
@@ -1105,7 +1117,7 @@
              description += "$";
  
              switch (spec_ench)
-@@ -2108,17 +2033,18 @@
+@@ -2108,17 +2034,18 @@
  #endif
                  break;
              }
@@ -1128,7 +1140,7 @@
              }
              else if (item_ident( item, ISFLAG_KNOW_TYPE ))
              {
-@@ -2131,7 +2057,7 @@
+@@ -2131,7 +2058,7 @@
          }
          else if (spec_ench != SPWPN_NORMAL && item_ident( item, ISFLAG_KNOW_TYPE ))
          {
@@ -1137,7 +1149,7 @@
          }
      }
  
-@@ -2349,6 +2275,8 @@
+@@ -2349,6 +2276,8 @@
          }
      }
  
@@ -1146,7 +1158,7 @@
      return (description);
  }
  
-@@ -2362,8 +2290,6 @@
+@@ -2362,8 +2291,6 @@
  {
      std::string description;
  
@@ -1155,7 +1167,7 @@
      switch (item.sub_type)
      {
      case MI_STONE:
-@@ -2474,14 +2400,12 @@
+@@ -2474,14 +2401,12 @@
  {
      std::string description;
  
@@ -1171,7 +1183,7 @@
      }
      else
      {
-@@ -2841,7 +2765,7 @@
+@@ -2841,7 +2766,7 @@
                  description += "ぬるぬる";
                  if (you.species != SP_MUMMY)
                      description += "していて嫌な臭いの";
@@ -1180,7 +1192,7 @@
                                 "着ようと思えば着られないこともない。 ";
  #else
                  description += "The slimy";
-@@ -3061,7 +2985,6 @@
+@@ -3061,7 +2986,6 @@
  #endif
              break;
          }
@@ -1188,7 +1200,7 @@
      }
  
      if (is_random_artefact( item ))
-@@ -3089,7 +3012,7 @@
+@@ -3089,7 +3013,7 @@
  
              if (item.sub_type == ARM_CLOAK || item.sub_type == ARM_BOOTS)
  #ifdef JP
@@ -1197,7 +1209,7 @@
  #else
                  description += ", and helps its wearer avoid being noticed";
  #endif
-@@ -3138,6 +3061,8 @@
+@@ -3138,6 +3062,8 @@
  #else
  #endif
  
@@ -1206,7 +1218,7 @@
      return description;
  }
  
-@@ -3150,8 +3075,6 @@
+@@ -3150,8 +3076,6 @@
  {
      std::string description;
  
@@ -1215,7 +1227,7 @@
      if (get_ident_type( OBJ_WANDS, item.sub_type ) != ID_KNOWN_TYPE)
  #ifdef JP
          description += "これは杖だ。魔法の力を秘めているかもしれない。 $";
-@@ -3354,6 +3277,8 @@
+@@ -3354,6 +3278,8 @@
  #endif
      }
  
@@ -1224,7 +1236,7 @@
      return description;
  }
  
-@@ -3367,8 +3292,6 @@
+@@ -3367,8 +3293,6 @@
  {
      std::string description;
  
@@ -1233,7 +1245,7 @@
      switch (item.sub_type)
      {
      // rations
-@@ -4070,7 +3993,7 @@
+@@ -4070,7 +3994,7 @@
              break;
          case POT_CONFUSION:
  #ifdef JP
@@ -1242,7 +1254,7 @@
                             "あなた自身の行動をまともに制御できなくしてしまう。 ";
  #else
              description += "confuses your perceptions and reduces "
-@@ -4093,7 +4016,7 @@
+@@ -4093,7 +4017,7 @@
              break;
          case POT_DEGENERATION:
  #ifdef JP
@@ -1251,7 +1263,7 @@
                             "恐ろしい障害をもたらす。 ";
  #else
              description += "can do terrible things to your "
-@@ -4165,7 +4088,7 @@
+@@ -4165,7 +4089,7 @@
          case POT_HEALING:
          case POT_HEAL_WOUNDS:
  #ifdef JP
@@ -1260,7 +1272,7 @@
                             "永続的な負傷を";
  #else
              description += "If one uses it when they are "
-@@ -4517,7 +4440,7 @@
+@@ -4517,7 +4441,7 @@
          {
          case RING_REGENERATION:
  #ifdef JP
@@ -1269,7 +1281,7 @@
                             "同様に代謝エネルギーの消費速度も加速する。 ";
  #else
              description += "This wonderful ring greatly increases the "
-@@ -4529,7 +4452,7 @@
+@@ -4529,7 +4453,7 @@
          case RING_PROTECTION:
              description +=
  #ifdef JP
@@ -1278,7 +1290,7 @@
                  "効果がどちらであるかは指輪の数値に依存している。 ";
  #else
                  "This ring either protects its wearer from harm or makes "
-@@ -4567,7 +4490,7 @@
+@@ -4567,7 +4491,7 @@
          case RING_STRENGTH:
              description +=
  #ifdef JP
@@ -1287,7 +1299,7 @@
                  "効果がどちらであるかは指輪の数値に依存している。 ";
  #else
                  "This ring increases or decreases the physical strength "
-@@ -4588,7 +4511,7 @@
+@@ -4588,7 +4512,7 @@
          case RING_SEE_INVISIBLE:
              description +=
  #ifdef JP
@@ -1296,7 +1308,7 @@
                  "視ることを可能にする。 ";
  #else
                  "This ring allows its wearer to see those things hidden "
-@@ -4599,7 +4522,7 @@
+@@ -4599,7 +4523,7 @@
          case RING_INVISIBILITY:
              description +=
  #ifdef JP
@@ -1305,7 +1317,7 @@
                  "透明化の最中には代謝エネルギーの消費が大幅に増加する。 ";
  #else
                  "This powerful ring can be activated to hide its wearer "
-@@ -4621,7 +4544,7 @@
+@@ -4621,7 +4545,7 @@
          case RING_TELEPORTATION:
              description +=
  #ifdef JP
@@ -1314,7 +1326,7 @@
                  "また、発動することで同様の転位を意図的に引き起こすことができる。 ";
  #else
                  "This ring occasionally exerts its power to randomly "
-@@ -4633,7 +4556,7 @@
+@@ -4633,7 +4557,7 @@
          case RING_EVASION:
              description +=
  #ifdef JP
@@ -1323,7 +1335,7 @@
                  "効果がどちらであるかは指輪の数値に依存している。 ";
  #else
                  "This ring makes its wearer either more or less capable "
-@@ -4655,7 +4578,7 @@
+@@ -4655,7 +4579,7 @@
          case RING_SUSTENANCE:
              description +=
  #ifdef JP
@@ -1332,7 +1344,7 @@
                  "装着者は食事を必要とする頻度が少なくなる。 ";
  #else
                  "This ring provides energy to its wearer, so that they "
-@@ -4666,7 +4589,7 @@
+@@ -4666,7 +4590,7 @@
          case RING_DEXTERITY:
              description +=
  #ifdef JP
@@ -1341,7 +1353,7 @@
                  "効果がどちらであるかは指輪の数値に依存している。 ";
  #else
                  "This ring increases or decreases the dexterity of its "
-@@ -4678,7 +4601,7 @@
+@@ -4678,7 +4602,7 @@
          case RING_INTELLIGENCE:
              description +=
  #ifdef JP
@@ -1350,7 +1362,7 @@
                  "効果がどちらであるかは指輪の数値に依存している。 ";
  #else
                  "This ring increases or decreases the mental ability of "
-@@ -4719,7 +4642,7 @@
+@@ -4719,7 +4643,7 @@
          case RING_LIFE_PROTECTION:
              description +=
  #ifdef JP
@@ -1359,7 +1371,7 @@
                  "アンデッドと死霊術による生命力の衰弱に対してある程度の免疫を授ける。 ";
  #else
                  "This blessed ring protects the life-force of its wearer "
-@@ -4741,9 +4664,9 @@
+@@ -4741,9 +4665,9 @@
          case RING_FIRE:
              description +=
  #ifdef JP
@@ -1372,7 +1384,7 @@
                  "ただし冷気の影響によって傷つきやすくなってしまう。 ";
  #else
                  "This ring brings its wearer more in contact with "
-@@ -4756,9 +4679,9 @@
+@@ -4756,9 +4680,9 @@
          case RING_ICE:
              description +=
  #ifdef JP
@@ -1385,7 +1397,7 @@
                  "ただし火の影響によって傷つきやすくなってしまう。 ";
  #else
                  "This ring brings its wearer more in contact with "
-@@ -4770,10 +4693,10 @@
+@@ -4770,10 +4694,10 @@
  
          case RING_TELEPORT_CONTROL:
  #ifdef JP
@@ -1400,7 +1412,7 @@
                             "使用者に悪影響を与えることに用心するべきである。 ";
  #else
              description += "This ring allows its wearer to control the "
-@@ -4789,9 +4712,9 @@
+@@ -4789,9 +4713,9 @@
          case AMU_RAGE:
              description +=
  #ifdef JP
@@ -1413,7 +1425,7 @@
  #else
                  "This amulet enables its wearer to attempt to enter "
                  "a state of berserk rage, and increases their chance "
-@@ -4803,7 +4726,7 @@
+@@ -4803,7 +4727,7 @@
          case AMU_RESIST_SLOW:
              description +=
  #ifdef JP
@@ -1422,7 +1434,7 @@
                  "また装着者を加速する魔術の持続時間を増加させる。 ";
  #else
                  "This amulet protects its wearer from some magically "
-@@ -4835,7 +4758,7 @@
+@@ -4835,7 +4759,7 @@
          case AMU_RESIST_CORROSION:
              description +=
  #ifdef JP
@@ -1431,7 +1443,7 @@
                  "ただし保護は絶対確実というわけではない。 ";
  #else
                  "This amulet protects the armour and weaponry of its "
-@@ -4847,7 +4770,7 @@
+@@ -4847,7 +4771,7 @@
          case AMU_THE_GOURMAND:
              description +=
  #ifdef JP
@@ -1440,7 +1452,7 @@
                  "ただし有毒あるいは呪われた肉はとりもなおさず危険である。 ";
  #else
                  "This amulet allows its wearer to consume meat in "
-@@ -4860,7 +4783,7 @@
+@@ -4860,7 +4784,7 @@
          case AMU_CONSERVATION:
              description +=
  #ifdef JP
@@ -1449,7 +1461,7 @@
                  "ただし保護は絶対確実というわけではない。 ";
  #else
                  "This amulet protects some of the possessions of "
-@@ -4872,9 +4795,9 @@
+@@ -4872,9 +4796,9 @@
          case AMU_CONTROLLED_FLIGHT:
              description +=
  #ifdef JP
@@ -1462,7 +1474,7 @@
                  "階段を降りたり床にあるアイテムを拾ったりすることを可能にする。 ";
  #else
                  "Should the wearer of this amulet be levitated "
-@@ -4898,7 +4821,7 @@
+@@ -4898,7 +4822,7 @@
          case AMU_RESIST_MUTATION:
              description +=
  #ifdef JP
@@ -1471,7 +1483,7 @@
                  "ただし保護は絶対確実というわけではない。 ";
  #else
                  "This amulet protects its wearer from mutations, "
-@@ -4913,8 +4836,6 @@
+@@ -4913,8 +4837,6 @@
              DEBUGSTR("Unknown jewellery");
  #endif
          }
@@ -1480,7 +1492,7 @@
      }
  
      if ((verbose == 1 || is_random_artefact( item ))
-@@ -5046,13 +4967,13 @@
+@@ -5046,13 +4968,13 @@
          {
              if (item.sub_type >= AMU_RAGE)
  #ifdef JP
@@ -1496,7 +1508,7 @@
  #else
                  description += "$This ring may have hidden properties.$";
  #endif
-@@ -5068,6 +4989,8 @@
+@@ -5068,6 +4990,8 @@
  #endif
      }
  
@@ -1505,7 +1517,7 @@
      return (description);
  }                               // end describe_jewellery()
  
-@@ -5329,6 +5252,8 @@
+@@ -5329,6 +5253,8 @@
  #endif
      }
  
@@ -1514,7 +1526,7 @@
      return (description);
  }
  
-@@ -5723,7 +5648,7 @@
+@@ -5723,7 +5649,7 @@
  std::string get_item_description( const item_def &item, char verbose, bool dump )
  {
      std::string description;
@@ -1523,7 +1535,7 @@
  
      if (!dump)
      {
-@@ -5825,6 +5750,7 @@
+@@ -5825,6 +5751,7 @@
  #endif
              break;
          }
@@ -1531,7 +1543,7 @@
          break;
  
      case OBJ_ORBS:
-@@ -5836,6 +5762,7 @@
+@@ -5836,6 +5763,7 @@
          description += "Once you have escaped to the surface with "
              "this invaluable artefact, your quest is complete. ";
  #endif
@@ -1539,7 +1551,7 @@
          break;
  
      case OBJ_MISCELLANY:
-@@ -5851,6 +5778,7 @@
+@@ -5851,6 +5779,7 @@
              ((item.sub_type == CORPSE_BODY) ? "A corpse. "
                                          : "A decaying skeleton. ");
  #endif
@@ -1547,7 +1559,7 @@
          break;
  
      default:
-@@ -5861,10 +5789,12 @@
+@@ -5861,10 +5790,12 @@
          DEBUGSTR("Bad item class");
          description += "This item should not exist. Mayday! Mayday! ";
  #endif
@@ -1560,7 +1572,7 @@
  #ifdef JP
          description += "$重量 ";
  #else
-@@ -6894,7 +6824,7 @@
+@@ -6894,7 +6825,7 @@
  #ifdef JP
          description += "術者が手に持っていた剣を空中で舞わせて、 $"
                         "敵を攻撃させる。 $"
@@ -1569,21 +1581,38 @@
                         "作用しない。 ";
  #else
          description += "causes a weapon held in the caster's hand to dance "
-@@ -11458,11 +11388,13 @@
+@@ -11449,21 +11380,24 @@
+ static void print_god_abil_desc( int abil )
+ {
+     const ability_def &abil_info = get_ability_def( abil );
++	std::ostringstream ostr;
++	std::string cost;
+ 
+ #ifdef JP
+-    const std::string cost = "(" + make_cost_description( abil_info ) + ")";
++    cost = "(" + make_cost_description( abil_info ) + ")";
+ #else
+-    const std::string cost = "(" + make_cost_description( abil_info ) + ")";
++    cost = "(" + make_cost_description( abil_info ) + ")";
+ #endif
  
      // Produce a 79 character string with cost right justified:
-     std::string str( abil_info.name );
-+	/*
+-    std::string str( abil_info.name );
++	ostr << abil_info.name;
  #ifdef JP
-     str += std::string( 77 - str.length() - cost.length(), ' ' ) + cost + EOL;
+-    str += std::string( 77 - str.length() - cost.length(), ' ' ) + cost + EOL;
++	utf8_indent(abil_info.name, 69, ostr);
++    ostr << cost << EOL;
  #else
-     str += std::string( 79 - str.length() - cost.length(), ' ' ) + cost + EOL;
+-    str += std::string( 79 - str.length() - cost.length(), ' ' ) + cost + EOL;
++    ostr << std::string( 79 - str.length() - cost.length(), ' ' ) << cost << EOL;
  #endif
-+	*/
-     cprintf( str.c_str() );
+-    cprintf( str.c_str() );
++    cprintf( ostr.str().c_str() );
  }
  
-@@ -12079,7 +12011,7 @@
+ 
+@@ -12079,7 +12013,7 @@
                  {
  #ifdef JP
                      cprintf( "あなたはヴェフメットの名に於いての殺しによって力を得られる。" EOL
@@ -1592,7 +1621,7 @@
  #else
                      cprintf( "You can gain power from the those you kill " EOL
                               "   in Vehumet's name, or those slain by your servants." EOL );
---- ./source-old/direct.cc	2012-04-15 23:25:38.994088135 +0900
+--- ./source-old/direct.cc	2012-04-19 00:45:13.612850059 +0900
 +++ ./source-unicode/direct.cc	2012-04-08 21:40:25.169347518 +0900
 @@ -1511,7 +1511,7 @@
  
@@ -1603,7 +1632,7 @@
  #ifdef JP 
              snprintf( info, INFO_SIZE, "%sは%sを着ている。", 
  #else
---- ./source-old/effects.cc	2012-04-15 23:25:39.154087497 +0900
+--- ./source-old/effects.cc	2012-04-19 00:45:13.759516011 +0900
 +++ ./source-unicode/effects.cc	2012-04-08 21:40:25.209347520 +0900
 @@ -13,6 +13,7 @@
  
@@ -1613,7 +1642,7 @@
  
  #include "externs.h"
  
---- ./source-old/externs.h	2012-04-15 23:25:39.244087138 +0900
+--- ./source-old/externs.h	2012-04-19 00:45:13.849515573 +0900
 +++ ./source-unicode/externs.h	2012-04-08 21:40:25.256014188 +0900
 @@ -26,9 +26,9 @@
  #include "Kills.h"
@@ -1628,7 +1657,7 @@
  
  #define MAX_NUM_GODS    21
  
---- ./source-old/fight.cc	2012-04-15 23:25:39.297420258 +0900
+--- ./source-old/fight.cc	2012-04-19 00:45:13.899515330 +0900
 +++ ./source-unicode/fight.cc	2012-04-08 21:40:25.306014190 +0900
 @@ -4052,8 +4052,8 @@
              case MONS_SPINY_WORM:
@@ -1694,9 +1723,9 @@
                      poison_monster(defender, false);
                  break;
  
---- ./source-old/food.cc	2012-04-15 23:25:39.450752980 +0900
-+++ ./source-unicode/food.cc	2012-04-08 21:40:25.346014192 +0900
-@@ -1279,20 +1279,24 @@
+--- ./source-old/food.cc	2012-04-19 00:45:14.049514598 +0900
++++ ./source-unicode/food.cc	2012-04-16 00:43:37.564238721 +0900
+@@ -1279,20 +1279,18 @@
              restore_stat(STAT_ALL, false);
              break;
          case FOOD_PIZZA:
@@ -1707,16 +1736,6 @@
  #else
 -            strcpy(info, "Mmm... ");
 +                 snprintf(info, INFO_SIZE, "むむむ…… %s", SysEnv.crawl_pizza);
-+#endif
-+             else
-+             {
-+                 temp_rand = random2(9);
-+#ifdef JP 
-+                 snprintf(info, INFO_SIZE, "むむむ…… %s",
-+                             (temp_rand == 0) ? "ハム＆パイナップルピザだ。" :
-+#else
-+                 snprintf(info, INFO_SIZE, "Mmm... %s",
-+                             (temp_rand == 0) ? "Ham and pineapple." :
  #endif
 -
 -            if (SysEnv.crawl_pizza && !one_chance_in(3))
@@ -1724,21 +1743,28 @@
 -            else
 -            {
 -                temp_rand = random2(9);
- 
+-
++             else
++             {
++                 temp_rand = random2(9);
  #ifdef JP 
 -                strcat(info, (temp_rand == 0) ? "ハム＆パイナップルピザだ。" :
++                 snprintf(info, INFO_SIZE, "むむむ…… %s",
++                             (temp_rand == 0) ? "ハム＆パイナップルピザだ。" :
                               (temp_rand == 1) ? "とても厚いピザだ。" :
                               (temp_rand == 2) ? "ベジタブルピザだ。" :
                               (temp_rand == 3) ? "ペパローニピザだ。" :
-@@ -1302,7 +1306,6 @@
+@@ -1302,7 +1300,8 @@
                               (temp_rand == 7) ? "超最高にうまいピザだ！"
                                                : "チキンピザだ。");
  #else
 -                strcat(info, (temp_rand == 0) ? "Ham and pineapple." :
++                 snprintf(info, INFO_SIZE, "Mmm... %s",
++                             (temp_rand == 0) ? "Ham and pineapple." :
                               (temp_rand == 1) ? "Extra thick crust." :
                               (temp_rand == 2) ? "Vegetable." :
                               (temp_rand == 3) ? "Pepperoni." :
---- ./source-old/hiscores.cc	2012-04-15 23:25:39.497419460 +0900
+--- ./source-old/hiscores.cc	2012-04-19 00:45:14.092847721 +0900
 +++ ./source-unicode/hiscores.cc	2012-04-15 22:53:10.115054307 +0900
 @@ -29,6 +29,7 @@
  #include <stdlib.h>
@@ -1767,7 +1793,7 @@
  #else
      FILE *handle = fopen("scores", mode);
  #endif
---- ./source-old/initfile.cc	2012-04-15 23:25:39.550752581 +0900
+--- ./source-old/initfile.cc	2012-04-19 00:45:14.142847477 +0900
 +++ ./source-unicode/initfile.cc	2012-04-08 21:40:25.436014195 +0900
 @@ -15,7 +15,7 @@
  
@@ -1778,7 +1804,7 @@
  #include <ctype.h>
  
  #include "Kills.h"
---- ./source-old/items.cc	2012-04-15 23:25:39.974084225 +0900
+--- ./source-old/items.cc	2012-04-19 00:45:14.572845382 +0900
 +++ ./source-unicode/items.cc	2012-04-08 21:40:25.486014197 +0900
 @@ -3088,7 +3088,7 @@
  //
@@ -1789,7 +1815,7 @@
  //   (including weight) which would cause a bit of a mess to state.
  //
  // - no item does anything for just carrying it... if that changes then
---- ./source-old/it_use3.cc	2012-04-15 23:25:39.757418423 +0900
+--- ./source-old/it_use3.cc	2012-04-19 00:45:14.346179820 +0900
 +++ ./source-unicode/it_use3.cc	2012-04-08 21:40:25.526014199 +0900
 @@ -15,6 +15,7 @@
  #include "it_use3.h"
@@ -1799,7 +1825,7 @@
  
  #include "externs.h"
  
---- ./source-old/Kills.cc	2012-04-15 23:25:38.344090729 +0900
+--- ./source-old/Kills.cc	2012-04-19 00:45:12.889520250 +0900
 +++ ./source-unicode/Kills.cc	2012-04-08 21:42:20.419351744 +0900
 @@ -47,12 +47,12 @@
  #if defined(WIN32CONSOLE) || defined(WINDOWS)
@@ -1905,7 +1931,7 @@
      kills = (unsigned short) readShort(file);
      exp   = readShort(file);
  
---- ./source-old/Kills.h	2012-04-15 23:25:38.364090649 +0900
+--- ./source-old/Kills.h	2012-04-19 00:45:12.906186836 +0900
 +++ ./source-unicode/Kills.h	2012-04-08 21:40:25.606014201 +0900
 @@ -39,10 +39,10 @@
  };
@@ -1930,7 +1956,7 @@
      std::vector<kill_ghost> ghosts;
  
      void record_ghost_kill(const struct monsters *mon);
---- ./source-old/libutil.cc	2012-04-15 23:25:40.204083308 +0900
+--- ./source-old/libutil.cc	2012-04-19 00:45:14.779511041 +0900
 +++ ./source-unicode/libutil.cc	2012-04-08 21:40:25.636014203 +0900
 @@ -12,6 +12,7 @@
  #include <stdio.h>
@@ -1940,7 +1966,7 @@
  
  #ifdef USE_MULTIWIN
  #include "externs.h"
---- ./source-old/macro.cc	2012-04-15 23:25:40.450748990 +0900
+--- ./source-old/macro.cc	2012-04-19 00:45:15.039509775 +0900
 +++ ./source-unicode/macro.cc	2012-04-08 21:40:25.676014204 +0900
 @@ -34,7 +34,7 @@
  
@@ -1951,7 +1977,7 @@
  #include <map>
  #include <deque>
  
---- ./source-old/makefile	2012-04-15 23:25:03.007565012 +0900
+--- ./source-old/makefile	2012-04-19 00:44:29.703064076 +0900
 +++ ./source-unicode/makefile	2012-04-08 21:40:25.709347539 +0900
 @@ -8,7 +8,7 @@
  
@@ -1962,7 +1988,7 @@
  
  all:
  	$(MAKE) $(OTHER) -f $(MAKEFILE) EXTRA_FLAGS='-O2 -fno-strength-reduce'
---- ./source-old/makefile.bor	2012-04-15 23:25:40.504082111 +0900
+--- ./source-old/makefile.bor	2012-04-19 00:45:15.092842848 +0900
 +++ ./source-unicode/makefile.bor	2012-04-08 21:37:10.866007061 +0900
 @@ -1,53 +1,53 @@
 -#
@@ -2071,20 +2097,16 @@
 +
 +.cc.o:
 +	$(CC) $(CFLAGS) $(NICEFLAGS) -o$*.o $< 
---- ./source-old/makefile.lnx	2012-04-15 23:25:40.544081951 +0900
-+++ ./source-unicode/makefile.lnx	2012-04-11 14:11:05.501196262 +0900
-@@ -16,15 +16,18 @@
+--- ./source-old/makefile.lnx	2012-04-19 00:45:15.159509190 +0900
++++ ./source-unicode/makefile.lnx	2012-04-19 00:24:50.645328162 +0900
+@@ -16,15 +16,14 @@
  OS_TYPE = LINUX
  EXTRA_FLAGS = -DJP -DWIZARD
  
 -CFLAGS = -Wall -Wwrite-strings -Wstrict-prototypes \
 -            -Wmissing-prototypes \
 -            -g -D$(OS_TYPE) $(EXTRA_FLAGS)
-+#CFLAGS = -Wall -Wwrite-strings -Wstrict-prototypes \
-+            #-Wmissing-prototypes -Wno-char-subscripts\
-+            #-fsigned-char -g -D$(OS_TYPE) $(EXTRA_FLAGS)
-+
-+CFLAGS = -Wall -Wwrite-strings -Wno-char-subscripts\
++CFLAGS = -Wall -Wwrite-strings -Wno-char-subscripts \
 +            -fsigned-char -g -D$(OS_TYPE) $(EXTRA_FLAGS)
  
  # LDFLAGS = -static
@@ -2098,7 +2120,7 @@
  
  # Include for Linux
  INCLUDES = -I/usr/include/ncurses
---- ./source-old/message.cc	2012-04-15 23:25:40.730747873 +0900
+--- ./source-old/message.cc	2012-04-19 00:45:15.339508313 +0900
 +++ ./source-unicode/message.cc	2012-04-12 18:46:58.824970518 +0900
 @@ -15,6 +15,7 @@
  #include "religion.h"
@@ -2150,7 +2172,7 @@
      int count = 0;
      for (int i = start; i != Next_Message; ++i)
      {
---- ./source-old/monplace.cc	2012-04-15 23:25:41.040746636 +0900
+--- ./source-old/monplace.cc	2012-04-19 00:45:15.609506997 +0900
 +++ ./source-unicode/monplace.cc	2012-04-08 21:40:25.822680876 +0900
 @@ -11,6 +11,8 @@
  #include "AppHdr.h"
@@ -2161,7 +2183,7 @@
  #include "externs.h"
  #include "dungeon.h"
  #include "monstuff.h"
---- ./source-old/monstuff.cc	2012-04-15 23:25:41.157412838 +0900
+--- ./source-old/monstuff.cc	2012-04-19 00:45:15.716173144 +0900
 +++ ./source-unicode/monstuff.cc	2012-04-08 21:40:25.876014211 +0900
 @@ -965,6 +965,7 @@
      char str_polymon[INFO_SIZE] = "";      // cannot use info[] here {dlb}
@@ -2191,7 +2213,7 @@
      // messaging: {dlb}
      bool invis = mons_flag( targetc, M_INVIS )
                      || mons_has_ench( monster, ENCH_INVIS );
---- ./source-old/mon-util.h	2012-04-15 23:25:40.990746836 +0900
+--- ./source-old/mon-util.h	2012-04-19 00:45:15.569507193 +0900
 +++ ./source-unicode/mon-util.h	2012-04-11 14:07:54.537855560 +0900
 @@ -22,7 +22,8 @@
  #define PACKED
@@ -2203,7 +2225,7 @@
  #endif
  #endif
  
---- ./source-old/ouch.cc	2012-04-15 23:25:41.370745320 +0900
+--- ./source-old/ouch.cc	2012-04-19 00:45:15.926172121 +0900
 +++ ./source-unicode/ouch.cc	2012-04-13 16:26:02.727759751 +0900
 @@ -1134,22 +1134,23 @@
      invent( -1, !dead );
@@ -2238,7 +2260,7 @@
  
      more();
  
---- ./source-old/output.cc	2012-04-15 23:25:41.407411840 +0900
+--- ./source-old/output.cc	2012-04-19 00:45:15.969505243 +0900
 +++ ./source-unicode/output.cc	2012-04-13 14:44:28.047505545 +0900
 @@ -13,6 +13,8 @@
  #include "output.h"
@@ -2738,7 +2760,7 @@
  }
  
  #else
---- ./source-old/output.h	2012-04-15 23:25:41.437411720 +0900
+--- ./source-old/output.h	2012-04-19 00:45:16.009505048 +0900
 +++ ./source-unicode/output.h	2012-04-11 12:39:33.120993399 +0900
 @@ -17,7 +17,8 @@
   * called from: acr - player - stuff
@@ -2750,7 +2772,7 @@
  
  
  #endif
---- ./source-old/randart.cc	2012-04-15 23:25:41.637410923 +0900
+--- ./source-old/randart.cc	2012-04-19 00:45:16.229503977 +0900
 +++ ./source-unicode/randart.cc	2012-04-11 14:09:14.211191766 +0900
 @@ -17,6 +17,7 @@
  
@@ -2770,7 +2792,7 @@
  #endif
  
  //int unranddatasize;
---- ./source-old/sendscore.cc	2012-04-15 23:25:41.827410165 +0900
+--- ./source-old/sendscore.cc	2012-04-19 00:45:16.466169490 +0900
 +++ ./source-unicode/sendscore.cc	2012-04-08 21:40:25.959347548 +0900
 @@ -16,6 +16,8 @@
  #include "AppHdr.h"
@@ -2781,7 +2803,7 @@
  #include <string>
  
  #if defined(WINDOWS) || defined(WIN32CONSOLE)
---- ./source-old/shopping.cc	2012-04-15 23:25:41.874076645 +0900
+--- ./source-old/shopping.cc	2012-04-19 00:45:16.506169296 +0900
 +++ ./source-unicode/shopping.cc	2012-04-12 16:11:25.707969710 +0900
 @@ -205,9 +205,10 @@
  
@@ -2797,7 +2819,7 @@
  #   ifdef STASH_TRACKING
          si.add_item(string(st_pass), desc, gp_value);
  #   endif
---- ./source-old/skills2.cc	2012-04-15 23:25:41.974076246 +0900
+--- ./source-old/skills2.cc	2012-04-19 00:45:16.616168760 +0900
 +++ ./source-unicode/skills2.cc	2012-04-14 01:01:14.786608130 +0900
 @@ -21,6 +21,8 @@
  #include <stdio.h>
@@ -2847,7 +2869,7 @@
  #else
              cprintf( " %c %-14s Skill %2d", (you.skills[x] == 0)         ? ' ' : (you.practise_skill[x] == 0) ? '-' : '+', skills[x][0], you.skills[x] );
  #endif
---- ./source-old/spells4.cc	2012-04-15 23:25:42.197408688 +0900
+--- ./source-old/spells4.cc	2012-04-19 00:45:16.856167590 +0900
 +++ ./source-unicode/spells4.cc	2012-04-08 21:40:26.056014218 +0900
 @@ -12,8 +12,9 @@
  
@@ -2860,7 +2882,7 @@
  
  #include "externs.h"
  
---- ./source-old/spl-book.cc	2012-04-15 23:25:42.244075169 +0900
+--- ./source-old/spl-book.cc	2012-04-19 00:45:16.896167395 +0900
 +++ ./source-unicode/spl-book.cc	2012-04-14 21:03:49.626519101 +0900
 @@ -805,7 +805,7 @@
      cprintf( str_pass );
@@ -2871,7 +2893,7 @@
  #else
      cprintf( EOL EOL " Spells                             Type                      Level" EOL );
  #endif
---- ./source-old/spl-cast.cc	2012-04-15 23:25:42.304074929 +0900
+--- ./source-old/spl-cast.cc	2012-04-19 00:45:16.966167054 +0900
 +++ ./source-unicode/spl-cast.cc	2012-04-14 20:56:44.524872940 +0900
 @@ -116,7 +116,7 @@
      clrscr();
@@ -2902,7 +2924,7 @@
  
              itoa( (int) spell_difficulty( spell ), sval, 10 );
              cprintf(sval);
---- ./source-old/stash.cc	2012-04-15 23:25:42.424074451 +0900
+--- ./source-old/stash.cc	2012-04-19 00:45:17.219499153 +0900
 +++ ./source-unicode/stash.cc	2012-04-12 16:11:49.577969604 +0900
 @@ -16,10 +16,11 @@
  #include "travel.h"
@@ -2933,7 +2955,7 @@
              // Kill leading and trailing whitespace
              desc.erase(desc.find_last_not_of(" \n\t") + 1);
              desc.erase(0, desc.find_first_not_of(" \n\t"));
---- ./source-old/stuff.cc	2012-04-15 23:25:42.464074291 +0900
+--- ./source-old/stuff.cc	2012-04-19 00:45:17.259498958 +0900
 +++ ./source-unicode/stuff.cc	2012-04-13 15:55:26.419072826 +0900
 @@ -18,6 +18,7 @@
  #include <stdio.h>
@@ -2984,7 +3006,7 @@
 +        ostr << " ";
 +}
 +#endif
---- ./source-old/stuff.h	2012-04-15 23:25:02.460900526 +0900
+--- ./source-old/stuff.h	2012-04-19 00:44:29.086400416 +0900
 +++ ./source-unicode/stuff.h	2012-04-13 14:38:20.612435150 +0900
 @@ -193,5 +193,14 @@
      return ((flags & test) == test);
@@ -3001,7 +3023,7 @@
 +
  #endif
  
---- ./source-old/tags.cc	2012-04-15 23:25:42.507407452 +0900
+--- ./source-old/tags.cc	2012-04-19 00:45:17.299498764 +0900
 +++ ./source-unicode/tags.cc	2012-04-08 21:40:26.136014221 +0900
 @@ -76,6 +76,7 @@
  #endif
@@ -3011,7 +3033,7 @@
  
  #include "abl-show.h"
  #include "enum.h"
---- ./source-old/travel.cc	2012-04-15 23:25:42.770739734 +0900
+--- ./source-old/travel.cc	2012-04-19 00:45:17.526164325 +0900
 +++ ./source-unicode/travel.cc	2012-04-08 21:40:26.179347555 +0900
 @@ -20,6 +20,8 @@
  #include "travel.h"
@@ -3022,7 +3044,7 @@
  #include <ctype.h>
  
  #ifdef DOS
---- ./source-old/view.cc	2012-04-15 23:25:42.900739216 +0900
+--- ./source-old/view.cc	2012-04-19 00:45:17.672830278 +0900
 +++ ./source-unicode/view.cc	2012-04-08 21:40:26.239347558 +0900
 @@ -2741,7 +2741,7 @@
  
