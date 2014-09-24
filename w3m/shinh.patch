@@ -1,0 +1,916 @@
+diff --git a/mailcap.c b/mailcap.c
+index c0461df..5c3d74d 100644
+--- a/mailcap.c
++++ b/mailcap.c
+@@ -53,6 +53,11 @@ struct mailcap *
+     struct mailcap *mcap = NULL;
+     int i;
+ 
++    if (!strcmp(type, "application/x-tar") ||
++	!strcmp(type, "application/x-gtar")) {
++	return NULL;
++    }
++
+     if (table == NULL)
+ 	return NULL;
+     for (; table->type; table++) {
+diff --git a/history.c b/history.c
+index 951ef83..1adfb5c 100644
+--- a/history.c
++++ b/history.c
+@@ -55,6 +55,46 @@
+ }
+ 
+ void
++saveOneHistory(const char *ptr)
++{
++    FILE *f;
++    Str line;
++    long ri, wi;
++    static int prev_num_hist = 0;
++    int num_skip = prev_num_hist - URLHistSize;
++
++    if ((f = fopen(rcFile(HISTORY_FILE), "r+t")) == NULL)
++        return;
++
++    ri = wi = 0;
++    prev_num_hist = 1;
++    flock(fileno(f), LOCK_EX);
++    while (!feof(f)) {
++	line = Strfgets(f);
++	Strchop(line);
++	Strremovefirstspaces(line);
++	Strremovetrailingspaces(line);
++	if (line->length == 0)
++	    continue;
++	if (num_skip-- > 0)
++	    continue;
++	if (!Strcmp_charp(line, ptr))
++	    continue;
++	prev_num_hist++;
++
++	ri = ftell(f);
++	fseek(f, wi, SEEK_SET);
++	fprintf(f, "%s\n", (char *)line->ptr);
++	wi = ftell(f);
++	fseek(f, ri, SEEK_SET);
++    }
++    fseek(f, wi, SEEK_SET);
++    fprintf(f, "%s\n", ptr);
++    ftruncate(fileno(f), ftell(f));
++    fclose(f);
++}
++
++void
+ saveHistory(Hist *hist, size_t size)
+ {
+     FILE *f;
+@@ -150,6 +190,11 @@
+ HistItem *
+ pushHashHist(Hist *hist, char *ptr)
+ {
++#ifdef USE_HISTORY
++    if (UseHistory && SaveURLHist == WHEN_SAVE_HIST_ALWAYS)
++	saveOneHistory(ptr);
++#endif /* USE_HISTORY */
++
+     HistItem *item;
+ 
+     if (hist == NULL || hist->list == NULL)
+diff --git a/history.h b/history.h
+index 4c41099..5a1ef96 100644
+--- a/history.h
++++ b/history.h
+@@ -7,6 +7,10 @@
+ 
+ #define HIST_HASH_SIZE 127
+ 
++#define WHEN_SAVE_HIST_NEVER  0
++#define WHEN_SAVE_HIST_QUIT   1
++#define WHEN_SAVE_HIST_ALWAYS 2
++
+ typedef ListItem HistItem;
+ 
+ typedef GeneralList HistList;
+diff --git a/main.c b/main.c
+index 21f716d..b0e6ab0 100644
+--- a/main.c
++++ b/main.c
+@@ -2423,7 +2423,7 @@ static char *getCurWord(Buffer *buf, int *spos, int *epos,
+     save_cookies();
+ #endif				/* USE_COOKIE */
+ #ifdef USE_HISTORY
+-    if (UseHistory && SaveURLHist)
++    if (UseHistory && SaveURLHist == WHEN_SAVE_HIST_QUIT)
+ 	saveHistory(URLHist, URLHistSize);
+ #endif				/* USE_HISTORY */
+     w3m_exit(0);
+diff --git a/rc.c b/rc.c
+index abb2e31..80ff3dc 100644
+--- a/rc.c
++++ b/rc.c
+@@ -330,6 +330,15 @@ struct sel_c {
+ };
+ #endif
+ 
++#ifdef USE_HISTORY
++static struct sel_c when_save_hist[] = {
++    {N_S(WHEN_SAVE_HIST_NEVER), N_("never")},
++    {N_S(WHEN_SAVE_HIST_QUIT), N_("quit")},
++    {N_S(WHEN_SAVE_HIST_ALWAYS), N_("always")},
++    {0, NULL, NULL}
++};
++#endif
++
+ struct param_ptr params1[] = {
+     {"tabstop", P_NZINT, PI_TEXT, (void *)&Tabstop, CMT_TABSTOP, NULL},
+     {"indent_incr", P_NZINT, PI_TEXT, (void *)&IndentIncr, CMT_INDENT_INCR,
+@@ -431,13 +440,18 @@ struct param_ptr params2[] = {
+ #endif				/* USE_COLOR */
+ 
+ 
+-struct param_ptr params3[] = {
+-    {"pagerline", P_NZINT, PI_TEXT, (void *)&PagerMax, CMT_PAGERLINE, NULL},
+ #ifdef USE_HISTORY
++struct param_ptr params11[] = {
+     {"use_history", P_INT, PI_ONOFF, (void *)&UseHistory, CMT_HISTORY, NULL},
+     {"history", P_INT, PI_TEXT, (void *)&URLHistSize, CMT_HISTSIZE, NULL},
+-    {"save_hist", P_INT, PI_ONOFF, (void *)&SaveURLHist, CMT_SAVEHIST, NULL},
++    {"save_hist", P_INT, PI_SEL_C, (void *)&SaveURLHist, CMT_SAVEHIST,
++     (void *)when_save_hist},
++};
+ #endif				/* USE_HISTORY */
++
++
++struct param_ptr params3[] = {
++    {"pagerline", P_NZINT, PI_TEXT, (void *)&PagerMax, CMT_PAGERLINE, NULL},
+     {"confirm_qq", P_INT, PI_ONOFF, (void *)&confirm_on_quit, CMT_CONFIRM_QQ,
+      NULL},
+     {"close_tab_back", P_INT, PI_ONOFF, (void *)&close_tab_back,
+@@ -680,6 +694,7 @@ struct param_section sections[] = {
+ #ifdef USE_COLOR
+     {N_("Color Settings"), params2},
+ #endif				/* USE_COLOR */
++    {N_("History Settings"), params11},
+     {N_("Miscellaneous Settings"), params3},
+     {N_("Directory Settings"), params5},
+     {N_("External Program Settings"), params6},
+diff --git a/file.c b/file.c
+index 31de202..8b58cb2 100644
+--- a/file.c
++++ b/file.c
+@@ -1768,10 +1768,8 @@ struct http_auth www_auth[] = {
+ #ifdef USE_EXTERNAL_URI_LOADER
+ 	    tmp = searchURIMethods(&pu);
+ 	    if (tmp != NULL) {
+-		b = loadGeneralFile(tmp->ptr, current, referer, flag, request);
+-		if (b != NULL && b != NO_BUFFER)
+-		    copyParsedURL(&b->currentURL, &pu);
+-		return b;
++		tpath = path = tmp->ptr;
++		goto load_doc;
+ 	    }
+ #endif
+ 	    /* FIXME: gettextize? */
+diff --git a/cookie.c b/cookie.c
+index 1b64e40..37bc0aa 100644
+--- a/cookie.c
++++ b/cookie.c
+@@ -22,6 +22,18 @@
+ 
+ #define contain_no_dots(p, ep) (total_dot_number((p),(ep),1)==0)
+ 
++static void dump(Str msg) {
++    FILE *fp = fopen("/tmp/log", "a");
++    fputs(msg ? msg->ptr : "(null)", fp);
++    fputc('\n', fp);
++    fclose(fp);
++}
++#define dump(msg)
++
++static void load_cookies_fp(FILE *fp);
++static void load_cookies_sync(void);
++static void save_cookies_fp(FILE *fp, char *cookie_file);
++
+ static int
+ total_dot_number(char *p, char *ep, int max_count)
+ {
+@@ -211,6 +223,10 @@ struct cookie *
+     int version = 0;
+     char *fq_domainname, *domainname;
+ 
++    dump(Strnew_charp("GET"));
++
++    load_cookies_sync();
++
+     fq_domainname = FQDN(pu->host);
+     check_expired_cookies();
+     for (p = First_cookie; p; p = p->next) {
+@@ -257,10 +273,10 @@ struct cookie *
+     ".com", ".edu", ".gov", ".mil", ".net", ".org", ".int", NULL
+ };
+ 
+-int
+-add_cookie(ParsedURL *pu, Str name, Str value,
+-	   time_t expires, Str domain, Str path,
+-	   int flag, Str comment, int version, Str port, Str commentURL)
++static int
++add_cookie_impl(ParsedURL *pu, Str name, Str value,
++		time_t expires, Str domain, Str path,
++		int flag, Str comment, int version, Str port, Str commentURL)
+ {
+     struct cookie *p;
+     char *domainname = (version == 0) ? FQDN(pu->host) : pu->host;
+@@ -398,9 +414,53 @@ struct cookie *
+     }
+ 
+     check_expired_cookies();
++
+     return 0;
+ }
+ 
++int
++add_cookie(ParsedURL *pu, Str name, Str value,
++	   time_t expires, Str domain, Str path,
++	   int flag, Str comment, int version, Str port, Str commentURL)
++{
++    FILE *fp = NULL;
++    char *cookie_file = NULL;
++    int r;
++
++    dump(Strnew_charp("ADD"));
++    if (sync_cookie) {
++	cookie_file = rcFile(COOKIE_FILE);
++	if (!(fp = fopen(cookie_file, "r+"))) {
++	    if (!(fp = fopen(cookie_file, "w")))
++		return;
++	    fclose(fp);
++	    if (!(fp = fopen(cookie_file, "r+")))
++		return;
++	}
++	if (flock(fileno(fp), LOCK_EX) != 0) {
++	    perror("flock");
++	    w3m_exit(1);  /* why fail... */
++	}
++
++	First_cookie = NULL;
++	load_cookies_fp(fp);
++    }
++
++    r = add_cookie_impl(pu, name, value, expires, domain, path,
++			flag, comment, version, port, commentURL);
++
++    if (sync_cookie) {
++	if (ftruncate(fileno(fp), 0) != 0) {
++	    perror("ftruncate");
++	    w3m_exit(1);
++	}
++	fseek(fp, 0, SEEK_SET);
++	save_cookies_fp(fp, cookie_file);
++    }
++
++    return r;
++}
++
+ struct cookie *
+ nth_cookie(int n)
+ {
+@@ -415,21 +475,10 @@ struct cookie *
+ 
+ #define str2charp(str) ((str)? (str)->ptr : "")
+ 
+-void
+-save_cookies(void)
++static void
++save_cookies_fp(FILE *fp, char *cookie_file)
+ {
+     struct cookie *p;
+-    char *cookie_file;
+-    FILE *fp;
+-
+-    check_expired_cookies();
+-
+-    if (!First_cookie || is_saved || no_rc_dir)
+-	return;
+-
+-    cookie_file = rcFile(COOKIE_FILE);
+-    if (!(fp = fopen(cookie_file, "w")))
+-	return;
+ 
+     for (p = First_cookie; p; p = p->next) {
+ 	if (!(p->flag & COO_USE) || p->flag & COO_DISCARD)
+@@ -446,6 +495,29 @@ struct cookie *
+     chmod(cookie_file, S_IRUSR | S_IWUSR);
+ }
+ 
++void
++save_cookies(void)
++{
++    char *cookie_file;
++    FILE *fp;
++
++    if (sync_cookie)
++	return;
++
++    dump(Strnew_charp("SAVE"));
++
++    check_expired_cookies();
++
++    if (!First_cookie || is_saved || no_rc_dir)
++	return;
++
++    cookie_file = rcFile(COOKIE_FILE);
++    if (!(fp = fopen(cookie_file, "w")))
++	return;
++
++    save_cookies_fp(fp, cookie_file);
++}
++
+ static Str
+ readcol(char **p)
+ {
+@@ -457,17 +529,13 @@ struct cookie *
+     return tmp;
+ }
+ 
+-void
+-load_cookies(void)
++static void
++load_cookies_fp(FILE *fp)
+ {
+     struct cookie *cookie, *p;
+-    FILE *fp;
+     Str line;
+     char *str;
+ 
+-    if (!(fp = fopen(rcFile(COOKIE_FILE), "r")))
+-	return;
+-
+     if (First_cookie) {
+ 	for (p = First_cookie; p->next; p = p->next) ;
+     }
+@@ -530,13 +598,41 @@ struct cookie *
+ 	    First_cookie = cookie;
+ 	p = cookie;
+     }
++}
++
++void
++load_cookies(void)
++{
++    FILE *fp;
++
++    dump(Strnew_charp("LOAD"));
++
++    if (!(fp = fopen(rcFile(COOKIE_FILE), "r")))
++	return;
++    if (flock(fileno(fp), LOCK_SH) != 0) {
++	perror("flock");
++	w3m_exit(1);  /* why fail... */
++    }
+ 
++    load_cookies_fp(fp);
+     fclose(fp);
+ }
+ 
++static void
++load_cookies_sync(void)
++{
++    if (!sync_cookie)
++	return;
++    First_cookie = NULL;
++    load_cookies();
++}
++
+ void
+ initCookie(void)
+ {
++    dump(Strnew_charp("INIT"));
++    if (sync_cookie)
++	return;
+     load_cookies();
+     check_expired_cookies();
+ }
+@@ -544,6 +640,10 @@ struct cookie *
+ Buffer *
+ cookie_list_panel(void)
+ {
++    dump("LIST PANEL");
++
++    load_cookies_sync();
++
+     /* FIXME: gettextize? */
+     Str src = Strnew_charp("<html><head><title>Cookies</title></head>"
+ 			   "<body><center><b>Cookies</b></center>"
+@@ -662,6 +762,8 @@ struct cookie *
+     int n, v;
+     struct cookie *p;
+ 
++    dump(Strnew_charp("SET FLAG"));
++
+     while (arg) {
+ 	if (arg->arg && *arg->arg && arg->value && *arg->value) {
+ 	    n = atoi(arg->arg);
+diff --git a/fm.h b/fm.h
+index 7ac6b30..ec97d71 100644
+--- a/fm.h
++++ b/fm.h
+@@ -1102,6 +1102,7 @@ struct cookie {
+ global int use_cookie init(FALSE);
+ global int show_cookie init(TRUE);
+ global int accept_cookie init(FALSE);
++global int sync_cookie init(FALSE);
+ #define ACCEPT_BAD_COOKIE_DISCARD	0
+ #define ACCEPT_BAD_COOKIE_ACCEPT	1
+ #define ACCEPT_BAD_COOKIE_ASK		2
+diff --git a/rc.c b/rc.c
+index 80ff3dc..e41f52b 100644
+--- a/rc.c
++++ b/rc.c
+@@ -195,6 +195,7 @@ struct rc_search_table {
+ #define CMT_USECOOKIE   N_("Enable cookie processing")
+ #define CMT_SHOWCOOKIE  N_("Print a message when receiving a cookie")
+ #define CMT_ACCEPTCOOKIE N_("Accept cookies")
++#define CMT_SYNCCOOKIE   N_("Sync cookie")
+ #define CMT_ACCEPTBADCOOKIE N_("Action to be taken on invalid cookie")
+ #define CMT_COOKIE_REJECT_DOMAINS N_("Domains to reject cookies from")
+ #define CMT_COOKIE_ACCEPT_DOMAINS N_("Domains to accept cookies from")
+@@ -581,6 +582,8 @@ struct param_ptr params8[] = {
+      CMT_SHOWCOOKIE, NULL},
+     {"accept_cookie", P_INT, PI_ONOFF, (void *)&accept_cookie,
+      CMT_ACCEPTCOOKIE, NULL},
++    {"sync_cookie", P_INT, PI_ONOFF, (void *)&sync_cookie,
++     CMT_SYNCCOOKIE, NULL},
+     {"accept_bad_cookie", P_INT, PI_SEL_C, (void *)&accept_bad_cookie,
+      CMT_ACCEPTBADCOOKIE, (void *)badcookiestr},
+     {"cookie_reject_domains", P_STRING, PI_TEXT,
+diff --git a/parsetagx.c b/parsetagx.c
+index 6b627d2..53c86d4 100644
+--- a/parsetagx.c
++++ b/parsetagx.c
+@@ -159,7 +159,8 @@ struct parsed_tag *
+     /* Parse tag arguments */
+     SKIP_BLANKS(q);
+     while (1) {
+-       Str value = NULL, value_tmp = NULL;
++	Str value = NULL, value_tmp = NULL;
++	if (*q == '/' && tag_id == HTML_SCRIPT) return NULL;
+ 	if (*q == '>' || *q == '\0')
+ 	    goto done_parse_tag;
+ 	p = attrname;
+diff --git a/main.c b/main.c
+index 4d19bd0..aa60c0d 100644
+--- a/main.c
++++ b/main.c
+@@ -3023,35 +3023,6 @@ static char *getCurWord(Buffer *buf, int *spos, int *epos,
+     on_target = TRUE;
+ }
+ 
+-/* view inline image */
+-DEFUN(followI, VIEW_IMAGE, "View image")
+-{
+-    Line *l;
+-    Anchor *a;
+-    Buffer *buf;
+-
+-    if (Currentbuf->firstLine == NULL)
+-	return;
+-    l = Currentbuf->currentLine;
+-
+-    a = retrieveCurrentImg(Currentbuf);
+-    if (a == NULL)
+-	return;
+-    /* FIXME: gettextize? */
+-    message(Sprintf("loading %s", a->url)->ptr, 0, 0);
+-    refresh();
+-    buf = loadGeneralFile(a->url, baseURL(Currentbuf), NULL, 0, NULL);
+-    if (buf == NULL) {
+-	/* FIXME: gettextize? */
+-	char *emsg = Sprintf("Can't load %s", a->url)->ptr;
+-	disp_err_message(emsg, FALSE);
+-    }
+-    else if (buf != NO_BUFFER) {
+-	pushBuffer(buf);
+-    }
+-    displayBuffer(Currentbuf, B_NORMAL);
+-}
+-
+ static FormItemList *
+ save_submit_formlist(FormItemList *src)
+ {
+@@ -5065,6 +5036,45 @@ static char *getCurWord(Buffer *buf, int *spos, int *epos,
+     invoke_browser(parsedURL2Str(&pu)->ptr);
+ }
+ 
++/* view inline image */
++DEFUN(followI, VIEW_IMAGE, "View image")
++{
++    Line *l;
++    Anchor *a;
++    Buffer *buf;
++    char *browser;
++
++    if (Currentbuf->firstLine == NULL)
++	return;
++    l = Currentbuf->currentLine;
++
++    a = retrieveCurrentImg(Currentbuf);
++    if (a == NULL)
++	return;
++
++    browser = searchKeyData();
++    if (browser != NULL && *browser != '\0') {
++	ParsedURL pu;
++	parseURL2(a->url, &pu, baseURL(Currentbuf));
++	invoke_browser(parsedURL2Str(&pu)->ptr);
++	return;
++    }
++
++    /* FIXME: gettextize? */
++    message(Sprintf("loading %s", a->url)->ptr, 0, 0);
++    refresh();
++    buf = loadGeneralFile(a->url, baseURL(Currentbuf), NULL, 0, NULL);
++    if (buf == NULL) {
++	/* FIXME: gettextize? */
++	char *emsg = Sprintf("Can't load %s", a->url)->ptr;
++	disp_err_message(emsg, FALSE);
++    }
++    else if (buf != NO_BUFFER) {
++	pushBuffer(buf);
++    }
++    displayBuffer(Currentbuf, B_NORMAL);
++}
++
+ /* show current line number and number of lines in the entire document */
+ DEFUN(curlno, LINE_INFO, "Show current line number")
+ {
+diff --git a/file.c b/file.c
+index 7241416..3d8bb1b 100644
+--- a/file.c
++++ b/file.c
+@@ -1559,7 +1559,6 @@ struct http_auth www_auth[] = {
+ 	if (QuietMessage)
+ 	    return;
+ 	/* input username and password */
+-	sleep(2);
+ 	if (fmInitialized) {
+ 	    char *pp;
+ 	    term_raw();
+diff --git a/display.c b/display.c
+index 386c42f..17210ad 100644
+--- a/display.c
++++ b/display.c
+@@ -1226,7 +1226,7 @@
+ }
+ 
+ void
+-disp_message_nsec(char *s, int redraw_current, int sec, int purge, int mouse)
++disp_message_nsec(char *s, int redraw_current, float sec, int purge, int mouse)
+ {
+     if (QuietMessage)
+ 	return;
+diff --git a/file.c b/file.c
+index 3d8bb1b..7bc142e 100644
+--- a/file.c
++++ b/file.c
+@@ -837,12 +837,12 @@ struct link_stack {
+ 		int err;
+ 		if (show_cookie) {
+ 		    if (flag & COO_SECURE)
+-		        disp_message_nsec("Received a secured cookie", FALSE, 1,
+-				      TRUE, FALSE);
++		        disp_message_nsec("Received a secured cookie",
++					  FALSE, 0.1, TRUE, FALSE);
+ 		    else
+ 		        disp_message_nsec(Sprintf("Received cookie: %s=%s",
+-					      name->ptr, value->ptr)->ptr,
+-				      FALSE, 1, TRUE, FALSE);
++						  name->ptr, value->ptr)->ptr,
++					  FALSE, 0.1, TRUE, FALSE);
+ 		}
+ 		err =
+ 		    add_cookie(pu, name, value, expires, domain, path, flag,
+diff --git a/proto.h b/proto.h
+index b8f4885..28c0830 100644
+--- a/proto.h
++++ b/proto.h
+@@ -294,7 +294,7 @@ extern Buffer *selectBuffer(Buffer *firstbuf, Buffer *currentbuf,
+ extern Buffer *message_list_panel(void);
+ extern void message(char *s, int return_x, int return_y);
+ extern void disp_err_message(char *s, int redraw_current);
+-extern void disp_message_nsec(char *s, int redraw_current, int sec, int purge,
++extern void disp_message_nsec(char *s, int redraw_current, float sec, int purge,
+ 			      int mouse);
+ extern void disp_message(char *s, int redraw_current);
+ #ifdef USE_MOUSE
+@@ -493,7 +493,7 @@ extern void resetFrameElement(union frameset_element *f_element, Buffer *buf,
+ extern void toggle_stand(void);
+ extern char getch(void);
+ extern void bell(void);
+-extern int sleep_till_anykey(int sec, int purge);
++extern int sleep_till_anykey(float sec, int purge);
+ #ifdef USE_IMAGE
+ extern void touch_cursor();
+ #endif
+diff --git a/terms.c b/terms.c
+index 71e6701..db81c00 100644
+--- a/terms.c
++++ b/terms.c
+@@ -1983,7 +1983,7 @@ struct termios
+ }
+ 
+ int
+-sleep_till_anykey(int sec, int purge)
++sleep_till_anykey(float sec, int purge)
+ {
+     fd_set rfd;
+     struct timeval tim;
+@@ -1994,7 +1994,7 @@ struct termios
+     term_raw();
+ 
+     tim.tv_sec = sec;
+-    tim.tv_usec = 0;
++    tim.tv_usec = (sec - (int)sec) * 1000000;
+ 
+     FD_ZERO(&rfd);
+     FD_SET(tty, &rfd);
+diff --git a/file.c b/file.c
+index 8b58cb2..28ed7fb 100644
+--- a/file.c
++++ b/file.c
+@@ -4240,15 +4240,15 @@ struct http_auth www_auth[] = {
+     while (*q) {
+ 	if (!strncasecmp(q, "url=", 4)) {
+ 	    q += 4;
+-	    if (*q == '\"')	/* " */
++	    if (*q == '\"' || *q == '\'')	/* " or ' */
+ 		q++;
+ 	    r = q;
+ 	    while (*r && !IS_SPACE(*r) && *r != ';')
+ 		r++;
+ 	    s_tmp = Strnew_charp_n(q, r - q);
+ 
+-	    if (s_tmp->ptr[s_tmp->length - 1] == '\"') {	/* " 
+-								 */
++	    if (s_tmp->ptr[s_tmp->length - 1] == '\"'          /* "  */
++	       ||s_tmp->ptr[s_tmp->length - 1] == '\'') {      /* ' */ 
+ 		s_tmp->length--;
+ 		s_tmp->ptr[s_tmp->length] = '\0';
+ 	    }
+diff --git a/main.c b/main.c
+index 361dc20..1d10765 100644
+--- a/main.c
++++ b/main.c
+@@ -1806,6 +1806,12 @@ static char *getCurWord(Buffer *buf, int *spos, int *epos,
+     isrch(forwardSearch, "I-search: ");
+ }
+ 
++DEFUN(isrchfor_nomigemo, ISEARCH_NOMIGEMO,
++      "Incremental search forward w/o migemo")
++{
++    isrch(forwardSearchNoMigemo, "I-search: ");
++}
++
+ /* Search regular expression backward */
+ 
+ DEFUN(srchbak, SEARCH_BACK, "Search backward")
+@@ -1818,6 +1824,13 @@ static char *getCurWord(Buffer *buf, int *spos, int *epos,
+     isrch(backwardSearch, "I-search backward: ");
+ }
+ 
++DEFUN(isrchbak_nomigemo, ISEARCH_BACK_NOMIGEMO,
++      "Incremental search backward w/o migemo")
++{
++    isrch(backwardSearchNoMigemo, "I-search backward: ");
++}
++
++
+ static void
+ srch_nxtprv(int reverse)
+ {
+diff --git a/proto.h b/proto.h
+index 28c0830..2566805 100644
+--- a/proto.h
++++ b/proto.h
+@@ -18,8 +18,10 @@
+ extern void rdrwSc(void);
+ extern void srchfor(void);
+ extern void isrchfor(void);
++extern void isrchfor_nomigemo(void);
+ extern void srchbak(void);
+ extern void isrchbak(void);
++extern void isrchbak_nomigemo(void);
+ extern void srchnxt(void);
+ extern void srchprv(void);
+ extern void shiftl(void);
+@@ -342,7 +344,9 @@ extern int calcPosition(char *l, Lineprop *pr, int len, int pos, int bpos,
+ #define conv_search_string(str, f_ces)	str
+ #endif
+ extern int forwardSearch(Buffer *buf, char *str);
++extern int forwardSearchNoMigemo(Buffer *buf, char *str);
+ extern int backwardSearch(Buffer *buf, char *str);
++extern int backwardSearchNoMigemo(Buffer *buf, char *str);
+ extern void pcmap(void);
+ extern void escmap(void);
+ extern void escbmap(void);
+diff --git a/search.c b/search.c
+index 4182020..f9073d5 100644
+--- a/search.c
++++ b/search.c
+@@ -93,28 +93,14 @@
+ }
+ #endif
+ 
+-int
+-forwardSearch(Buffer *buf, char *str)
++static int
++forwardSearchWithRegex(Buffer *buf)
+ {
+-    char *p, *first, *last;
++    char *first, *last;
+     Line *l, *begin;
+     int wrapped = FALSE;
+     int pos;
+ 
+-#ifdef USE_MIGEMO
+-    if (migemo_active > 0) {
+-	if (((p = regexCompile(migemostr(str), IgnoreCase)) != NULL)
+-	    && ((p = regexCompile(str, IgnoreCase)) != NULL)) {
+-	    message(p, 0, 0);
+-	    return SR_NOTFOUND;
+-	}
+-    }
+-    else
+-#endif
+-    if ((p = regexCompile(str, IgnoreCase)) != NULL) {
+-	message(p, 0, 0);
+-	return SR_NOTFOUND;
+-    }
+     l = buf->currentLine;
+     if (l == NULL) {
+ 	return SR_NOTFOUND;
+@@ -188,14 +174,20 @@
+     return SR_NOTFOUND;
+ }
+ 
+-int
+-backwardSearch(Buffer *buf, char *str)
++int forwardSearchNoMigemo(Buffer *buf, char *str)
+ {
+-    char *p, *q, *found, *found_last, *first, *last;
+-    Line *l, *begin;
+-    int wrapped = FALSE;
+-    int pos;
++    char* p;
++    if ((p = regexCompile(str, IgnoreCase)) != NULL) {
++	message(p, 0, 0);
++	return SR_NOTFOUND;
++    }
++    return forwardSearchWithRegex(buf);
++}
+ 
++int
++forwardSearch(Buffer *buf, char *str)
++{
++    char* p;
+ #ifdef USE_MIGEMO
+     if (migemo_active > 0) {
+ 	if (((p = regexCompile(migemostr(str), IgnoreCase)) != NULL)
+@@ -203,13 +195,20 @@
+ 	    message(p, 0, 0);
+ 	    return SR_NOTFOUND;
+ 	}
++	return forwardSearchWithRegex(buf);
+     }
+-    else
+ #endif
+-    if ((p = regexCompile(str, IgnoreCase)) != NULL) {
+-	message(p, 0, 0);
+-	return SR_NOTFOUND;
+-    }
++    return forwardSearchNoMigemo(buf, str);
++}
++
++static int
++backwardSearchWithRegex(Buffer *buf)
++{
++    char *p, *q, *found, *found_last, *first, *last;
++    Line *l, *begin;
++    int wrapped = FALSE;
++    int pos;
++
+     l = buf->currentLine;
+     if (l == NULL) {
+ 	return SR_NOTFOUND;
+@@ -305,3 +304,33 @@
+     }
+     return SR_NOTFOUND;
+ }
++
++int
++backwardSearchNoMigemo(Buffer *buf, char *str)
++{
++    char *p;
++
++    if ((p = regexCompile(str, IgnoreCase)) != NULL) {
++	message(p, 0, 0);
++	return SR_NOTFOUND;
++    }
++    return backwardSearchWithRegex(buf);
++}
++
++int
++backwardSearch(Buffer *buf, char *str)
++{
++    char *p;
++
++#ifdef USE_MIGEMO
++    if (migemo_active > 0) {
++	if (((p = regexCompile(migemostr(str), IgnoreCase)) != NULL)
++	    && ((p = regexCompile(str, IgnoreCase)) != NULL)) {
++	    message(p, 0, 0);
++	    return SR_NOTFOUND;
++	}
++	return backwardSearchWithRegex(buf);
++    }
++#endif
++    return backwardSearchNoMigemo(buf, str);
++}
+diff --git a/url.c b/url.c
+index 4faafce..d7f397d 100644
+--- a/url.c
++++ b/url.c
+@@ -1261,7 +1261,7 @@ struct cmdtable schemetable[] = {
+ 
+     while (*p && (IS_ALNUM(*p) || *p == '.' || *p == '+' || *p == '-'))
+ 	p++;
+-    if (*p == ':') {		/* scheme found */
++    if (*p == ':' && !isdigit(p[1])) {		/* scheme found */
+ 	scheme = SCM_UNKNOWN;
+ 	for (i = 0; (q = schemetable[i].cmdname) != NULL; i++) {
+ 	    int len = strlen(q);
+diff --git a/main.c b/main.c
+index aa60c0d..21f716d 100644
+--- a/main.c
++++ b/main.c
+@@ -4030,7 +4030,7 @@ static char *getCurWord(Buffer *buf, int *spos, int *epos,
+ 
+ 	current = baseURL(Currentbuf);
+ 	if (current) {
+-	    char *c_url = parsedURL2Str(current)->ptr;
++	    char *c_url = parsedURL2Str(&Currentbuf->currentURL)->ptr;
+ 	    if (DefaultURLString == DEFAULT_URL_CURRENT) {
+ 		url = c_url;
+ 		if (DecodeURL)
+diff --git a/url.c b/url.c
+index d7f397d..0b9e6ab 100644
+--- a/url.c
++++ b/url.c
+@@ -1500,6 +1500,13 @@ struct cmdtable schemetable[] = {
+     else
+ 	u = url;
+   retry:
++    /* ignore ime.nu and ime.st silently */
++    if (strlen(url) > 20 &&
++	(strncmp(url, "http://ime.nu/", 13) == 0 ||
++	 strncmp(url, "http://ime.st/", 13) == 0)) {
++	u = Strnew_m_charp("http://", url+14, NULL)->ptr;
++    }
++
+     parseURL2(u, pu, current);
+     if (pu->scheme == SCM_LOCAL && pu->file == NULL) {
+ 	if (pu->label != NULL) {
+--- orig/form.c	2012-09-26 01:07:24.319747745 +0900
++++ fix/form.c	2012-09-26 12:54:49.579895178 +0900
+@@ -196,7 +196,7 @@
+ 	if (!strcasecmp(typestr, _formtypetbl[i]))
+ 	    return i;
+     }
+-    return FORM_UNKNOWN;
++    return FORM_INPUT_TEXT;
+ }
+ 
+ void
+--- orig/linein.c	2012-09-26 01:07:42.916346707 +0900
++++ fix/linein.c	2012-09-26 15:58:08.390158483 +0900
+@@ -104,7 +104,7 @@
+ 	use_hist = FALSE;
+     }
+     if (flag & IN_URL) {
+-	cm_mode = CPL_ALWAYS | CPL_URL;
++	cm_mode = CPL_ON | CPL_URL;
+     }
+     else if (flag & IN_FILENAME) {
+ 	cm_mode = CPL_ALWAYS;
+--- a/main.c
++++ b/main.c
+@@ -833,7 +833,8 @@ main(int argc, char **argv, char **envp)
+     mySignal(SIGPIPE, SigPipe);
+ #endif
+
+-    orig_GC_warn_proc = GC_set_warn_proc(wrap_GC_warn_proc);
++    orig_GC_warn_proc = GC_get_warn_proc();
++    GC_set_warn_proc(wrap_GC_warn_proc);
+     err_msg = Strnew();
+     if (load_argc == 0) {
+  /* no URL specified */

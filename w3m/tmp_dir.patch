@@ -1,0 +1,12 @@
+--- old/rc.c.orig	2014-05-19 18:48:29.754128282 +0900
++++ new/rc.c	2014-05-19 18:49:35.213923738 +0900
+@@ -1272,7 +1272,8 @@
+ 	goto rc_dir_err;
+     }
+     no_rc_dir = FALSE;
+-    tmp_dir = rc_dir;
++    tmp_dir = "/tmp/w3m";
++    mkdir(tmp_dir, 0755);
+ 
+     if (config_file == NULL)
+ 	config_file = rcFile(CONFIG_FILE);

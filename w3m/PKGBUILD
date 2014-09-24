@@ -1,0 +1,77 @@
+# $Id: PKGBUILD 199274 2013-11-09 05:21:55Z bisson $
+# Maintainer: Gaetan Bisson <bisson@archlinux.org>
+# Contributor: dorphell <dorphell@archlinux.org>
+
+pkgname=w3m-patch
+_pkgname=w3m
+pkgver=0.5.3
+pkgrel=5
+pkgdesc='Text-based Web browser, as well as pager'
+url='http://w3m.sourceforge.net/'
+license=('custom')
+arch=('i686' 'x86_64')
+makedepends=('gettext')
+optdepends=('imlib2: for graphics support') 
+depends=('openssl' 'gc' 'ncurses')
+provides=('w3m');
+conflicts=('w3m');
+replace=('w3m');
+source=("http://downloads.sourceforge.net/project/${_pkgname}/${_pkgname}/${_pkgname}-${pkgver}/${_pkgname}-${pkgver}.tar.gz"
+        'form_unknown.patch'
+        'file_handle.patch'
+        'https.patch'
+		'button.patch'
+        'gc72.patch'
+		'tmp_dir.patch')
+
+prepare() {
+	cd "${srcdir}/${_pkgname}-${pkgver}"
+
+	ls ../*.patch | xargs -i patch -p1 -i {}
+
+	#sed -i 's/file_handle/file_handle_rofl/g' istream.*
+	#sed -i 's|orig_GC_warn_proc = GC_set_warn_proc(wrap_GC_warn_proc);|orig_GC_warn_proc = GC_get_warn_proc();\
+	#GC_set_warn_proc(wrap_GC_warn_proc);|' main.c
+	sed -i 's|return FORM_UNKNOWN;|return FORM_INPUT_TEXT;|' form.c
+	sed -i 's|cm_mode = CPL_ALWAYS \| CPL_URL;|cm_mode = CPL_ON \| CPL_URL;|' linein.c
+
+}
+
+build() {
+	cd "${srcdir}/${_pkgname}-${pkgver}"
+	./configure \
+	--prefix=/usr --libexecdir=/usr/lib \
+	--with-termlib=ncurses --enable-unicode \
+	--disable-w3mmailer --disable-mouse \
+	--disable-alarm --disable-nntp \
+	--disable-gopher --disable-ipv6 \
+	--disable-xface --disable-nls \
+	--enable-image --without-imagelib
+
+	sed -i 's|@my_libs@||' Makefile
+
+	make
+}
+
+package() {
+	cd "${srcdir}/${_pkgname}-${pkgver}"
+	make DESTDIR="${pkgdir}" install
+
+	install -d "${pkgdir}"/usr/share/{doc,licenses}/"${_pkgname}"
+	find doc/* | grep -v CVS | xargs -i install -m644 "{}" "${pkgdir}/usr/share/doc/${_pkgname}"
+	ln -s ../../doc/"${_pkgname}"/README "${pkgdir}/usr/share/licenses/${_pkgname}"
+}
+sha1sums=('444b6c8cf7094ee95f8e9de96b37f814b9d83237'
+          '23d648033ad77f3c67d370c62cf7b7ed86b5c6f2'
+          '457de43be7eabc652614461a7ab25e3ba76b2aff'
+          '66affb2f695fe0bdde25cf774642bfd6a9404e88'
+          '7b9f1aa4bb816c6b6647c6e28d4ba458443a1ff2'
+          '7baa06ca684fd140503a2adc65e2d606970c4662'
+          '8f402fe67a4bab961a92fc3f7c5e3d40a3288e5d')
+sha1sums=('444b6c8cf7094ee95f8e9de96b37f814b9d83237'
+          '23d648033ad77f3c67d370c62cf7b7ed86b5c6f2'
+          '457de43be7eabc652614461a7ab25e3ba76b2aff'
+          '66affb2f695fe0bdde25cf774642bfd6a9404e88'
+          '7b9f1aa4bb816c6b6647c6e28d4ba458443a1ff2'
+          '7baa06ca684fd140503a2adc65e2d606970c4662'
+          'a9e672aad1822c3397eb30f420b811754310b7fc')
